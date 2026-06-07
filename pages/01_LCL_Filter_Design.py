@@ -653,7 +653,7 @@ elif selection == nav_options[1]:
             F(doc, rf'V_{{L\_max}} = {prm["v_l_max"]:.2f}\ \mathrm{{V}}', color='darkred')
             F(doc, rf'L_{{total\_max}} = \frac{{V_{{L\_max}}}}{{\omega_g \cdot I_{{rated}}}} = \frac{{{prm["v_l_max"]:.2f}}}{{{prm["omega_g"]:.2f} \times {prm["i_rated"]:.1f}}}',
               color='darkred')
-            FI(r'\mathbf{\Rightarrow\ L_{total\_max} = ' + f'{prm["l_max_mh"]:.4f}' + r'\ mH}', color='darkred', fontsize=14),
+            F(doc, r'\mathbf{\Rightarrow\ L_{total\_max} = ' + f'{prm["l_max_mh"]:.4f}' + r'\ mH}', color='darkred', fontsize=14)
         else:
             P(doc, '⚠️  Insufficient DC Bus Voltage — Grid phase voltage exceeds the converter\'s maximum output. Grid connection is not possible!',
               color=(200,0,0), bold=True)
@@ -688,14 +688,14 @@ elif selection == nav_options[1]:
             F(doc, rf'Z_{{base,tx}} = \frac{{U_{{line}}^2}}{{S_{{tx}}}} = \frac{{{prm["vg_line"]:.1f}^2}}{{{prm["tx_kva"]*1000:.0f}}} = {prm["z_base_tx"]:.4f}\ \Omega')
             F(doc, rf'Z_T = u_k\%\times Z_{{base,tx}} = {prm["tx_uk"]/100:.3f}\times {prm["z_base_tx"]:.4f} = {prm["z_tx"]:.4f}\ \Omega')
             F(doc, rf'L_g = \frac{{Z_T}}{{\omega_g}} = \frac{{{prm["z_tx"]:.4f}}}{{{prm["omega_g"]:.2f}}}', color='darkgreen')
-            FI(r'\mathbf{\Rightarrow\ L_g = ' + f'{prm["lg_mh"]:.4f}' + r'\ mH,\ SCR_{eq}\approx ' + f'{prm["eq_scr"]:.1f}' + r'}', color='darkgreen', fontsize=14),
+            F(doc, r'\mathbf{\Rightarrow\ L_g = ' + f'{prm["lg_mh"]:.4f}' + r'\ mH,\ SCR_{eq}\approx ' + f'{prm["eq_scr"]:.1f}' + r'}', color='darkgreen', fontsize=14)
         else:
             H(doc, '3.1  Based on Grid Short Circuit Ratio (SCR)', level=2)
             F(doc, rf'S_{{inv}} = \sqrt{{3}}\times {prm["vg_line"]:.1f}\times {prm["i_rated"]:.1f} = {prm["s_inv_kva"]:.1f}\ \mathrm{{kVA}}')
             F(doc, rf'Z_{{base}} = \frac{{U_{{line}}^2}}{{S_{{inv}}}} = \frac{{{prm["vg_line"]:.1f}^2}}{{{prm["s_inv_kva"]*1000:.0f}}} = {prm["z_base"]:.4f}\ \Omega')
             F(doc, rf'Z_g = \frac{{Z_{{base}}}}{{SCR}} = \frac{{{prm["z_base"]:.4f}}}{{{prm["scr"]:.1f}}} = {prm["z_g"]:.4f}\ \Omega')
             F(doc, rf'L_g = \frac{{Z_g}}{{2\pi f_g}} = \frac{{{prm["z_g"]:.4f}}}{{{prm["omega_g"]:.2f}}}', color='darkgreen')
-            FI(r'\mathbf{\Rightarrow\ L_g = ' + f'{prm["lg_mh"]:.4f}' + r'\ mH}', color='darkgreen', fontsize=14),
+            F(doc, r'\mathbf{\Rightarrow\ L_g = ' + f'{prm["lg_mh"]:.4f}' + r'\ mH}', color='darkgreen', fontsize=14)
         doc.add_page_break()
 
         # ── Chapter 4 ──
@@ -1225,8 +1225,11 @@ elif selection == nav_options[1]:
             eq_scr_b2    = tx_s_b2 / ((tx_uk_b2/100.0)*s_inv_b2) if s_inv_b2 > 0 else 999.0
 
         col_m1, col_m2 = st.columns(2)
-        with col_m1: st.metric("📐 External Leakage $L_g$", f"{lg_b2*1000:.2f} mH")
-        with col_m2: st.metric("📊 Equivalent SCR", f"{eq_scr_b2:.1f}")
+        if is_trial:
+            trial_lock("Calculation results require paid access")
+        else:
+            with col_m1: st.metric("📐 External Leakage $L_g$", f"{lg_b2*1000:.2f} mH")
+            with col_m2: st.metric("📊 Equivalent SCR", f"{eq_scr_b2:.1f}")
         st.divider()
 
         st.markdown("#### 🔩 Converter Internal Structure")
@@ -1280,7 +1283,10 @@ elif selection == nav_options[1]:
 
         if has_damping:
             recommended_rd = 1/(3*2*np.pi*cur_f_res_b2*cf_si) if cur_f_res_b2 > 0 else 0
-            st.markdown(f"Theoretical optimal Rd ≈ **{recommended_rd:.3f}** Ω")
+            if is_trial:
+                trial_lock("Recommended Rd requires paid access")
+            else:
+                st.markdown(f"Theoretical optimal Rd ≈ **{recommended_rd:.3f}** Ω")
             final_rd = st.number_input("Lock Rd (Ω)", min_value=0.0,
                                        value=float(st.session_state.get('lcl_rd', 0.05)),
                                        step=0.01, format="%.3f")
@@ -1375,6 +1381,8 @@ elif selection == nav_options[1]:
 
         if l_max_val == 0:
             st.error("🚨 DC Bus Voltage too low (Vg_phase > V_max_out) — Grid connection impossible. Please increase Vdc.")
+        elif is_trial:
+            trial_lock("Resonance frequency and parameter compliance results require paid access")
         elif all_pass:
             st.success(
                 f"✅ **Current design point is within the safety island.**\n\n"
@@ -1403,91 +1411,94 @@ elif selection == nav_options[1]:
     st.markdown("### 📄 4. Generate LCL Design Report")
     st.caption("Packages all current design parameters, LaTeX formula derivations, SOA map, and Bode plot into a professional report for engineering documentation or design review.")
 
-    rep_col1, rep_col2 = st.columns([1, 2])
-    with rep_col1:
-        report_fmt = st.radio("Report Format", ["Word (.docx)", "PDF (.pdf)"],
-                              horizontal=False, key="report_fmt")
-        gen_btn = st.button("🚀 Generate Report", type="primary", use_container_width=True)
-    with rep_col2:
-        st.info(
-            "**Report sections include:**\n\n"
-            "1. Operating conditions & boundary constraint parameter summary\n"
-            "2. LaTeX formula derivation for the three physical limits (rendered as math images)\n"
-            "3. External grid-side leakage inductance derivation (SCR or transformer mode)\n"
-            "4. Finalized parameter summary table (including resonance frequency and compliance status)\n"
-            "5. SOA five-constraint feasibility map\n"
-            "6. Resonance frequency Bode plot (including external leakage inductance response)"
-        )
+    if is_trial:
+        trial_lock("Report generation requires paid access")
+    else:
+        rep_col1, rep_col2 = st.columns([1, 2])
+        with rep_col1:
+            report_fmt = st.radio("Report Format", ["Word (.docx)", "PDF (.pdf)"],
+                                  horizontal=False, key="report_fmt")
+            gen_btn = st.button("🚀 Generate Report", type="primary", use_container_width=True)
+        with rep_col2:
+            st.info(
+                "**Report sections include:**\n\n"
+                "1. Operating conditions & boundary constraint parameter summary\n"
+                "2. LaTeX formula derivation for the three physical limits (rendered as math images)\n"
+                "3. External grid-side leakage inductance derivation (SCR or transformer mode)\n"
+                "4. Finalized parameter summary table (including resonance frequency and compliance status)\n"
+                "5. SOA five-constraint feasibility map\n"
+                "6. Resonance frequency Bode plot (including external leakage inductance response)"
+            )
 
-    if gen_btn:
-        with st.spinner("⏳ Rendering formulas and generating report, please wait..."):
-            try:
-                rp = {
-                    'vg_line': p_vg_line, 'vg_phase': vg_phase,
-                    'fg': p_fg, 'omega_g': omega_g,
-                    'i_rated': p_in, 'vdc': p_vdc,
-                    'fsw': p_fsw, 'topo': topo_type,
-                    'mod': mod_type, 'pf': target_pf,
-                    'damp_mode': damping_option,
-                    'ripple_pct': target_ripple_pct,
-                    'reactive_pct': max_reactive_pct,
-                    'delta_i_pp': delta_i_pp,
-                    'k_ripple': k_ripple,
-                    'f_safe_low': 10*p_fg, 'f_safe_high': 0.5*p_fsw,
-                    'v_max_out': v_max_out,
-                    'phi_deg': float(np.degrees(phi_rad)),
-                    'sin_phi': sin_phi,
-                    'v_l_max': v_l_max,
-                    'l_max_mh': l_max_val*1000,
-                    'l1_min_mh': l1_min_val*1000,
-                    'c_max_uf': c_max_reactive*1e6,
-                    'grid_mode': grid_mode_b2,
-                    'lg_mh': lg_b2*1000,
-                    'eq_scr': eq_scr_b2,
-                    's_inv_kva': s_inv_b2/1000,
-                    'z_base': z_base_b2, 'z_g': z_g_b2, 'scr': scr_val_b2,
-                    'tx_kva': tx_s_kva_b2, 'tx_uk': tx_uk_b2,
-                    'z_base_tx': z_base_tx_b2, 'z_tx': z_tx_b2,
-                    'has_l2': has_l2_b2, 'has_damping': has_damping,
-                    'final_l1': user_l1_b2, 'final_l2': l2_locked,
-                    'final_c': final_c, 'final_rd': final_rd,
-                    'l_total_mh': l_tot_si*1000,
-                    'f_res': cur_f_res_b2, 'all_pass': all_pass,
-                }
+        if gen_btn:
+            with st.spinner("⏳ Rendering formulas and generating report, please wait..."):
+                try:
+                    rp = {
+                        'vg_line': p_vg_line, 'vg_phase': vg_phase,
+                        'fg': p_fg, 'omega_g': omega_g,
+                        'i_rated': p_in, 'vdc': p_vdc,
+                        'fsw': p_fsw, 'topo': topo_type,
+                        'mod': mod_type, 'pf': target_pf,
+                        'damp_mode': damping_option,
+                        'ripple_pct': target_ripple_pct,
+                        'reactive_pct': max_reactive_pct,
+                        'delta_i_pp': delta_i_pp,
+                        'k_ripple': k_ripple,
+                        'f_safe_low': 10*p_fg, 'f_safe_high': 0.5*p_fsw,
+                        'v_max_out': v_max_out,
+                        'phi_deg': float(np.degrees(phi_rad)),
+                        'sin_phi': sin_phi,
+                        'v_l_max': v_l_max,
+                        'l_max_mh': l_max_val*1000,
+                        'l1_min_mh': l1_min_val*1000,
+                        'c_max_uf': c_max_reactive*1e6,
+                        'grid_mode': grid_mode_b2,
+                        'lg_mh': lg_b2*1000,
+                        'eq_scr': eq_scr_b2,
+                        's_inv_kva': s_inv_b2/1000,
+                        'z_base': z_base_b2, 'z_g': z_g_b2, 'scr': scr_val_b2,
+                        'tx_kva': tx_s_kva_b2, 'tx_uk': tx_uk_b2,
+                        'z_base_tx': z_base_tx_b2, 'z_tx': z_tx_b2,
+                        'has_l2': has_l2_b2, 'has_damping': has_damping,
+                        'final_l1': user_l1_b2, 'final_l2': l2_locked,
+                        'final_c': final_c, 'final_rd': final_rd,
+                        'l_total_mh': l_tot_si*1000,
+                        'f_res': cur_f_res_b2, 'all_pass': all_pass,
+                    }
 
-                soa_png  = _make_soa_fig(
-                    l1_min=l1_min_val, l_max=l_max_val,
-                    c_max=c_max_reactive, p_fsw=p_fsw, p_fg=p_fg,
-                    ltot_ripple_limit=ltot_ripple_limit, lg=lg_b2,
-                    has_l2=has_l2_b2, k_int=k_int,
-                    l_tot_design_mh=l_tot_design_mh, final_c=final_c,
-                    ltot_axis_max=ltot_axis_max, cf_axis_max=cf_axis_max_b2
-                )
-                bode_png = _make_bode_fig(
-                    l1_si=l1_si, l2_si=l2_locked*1e-3,
-                    lg=lg_b2, cf_si=cf_si,
-                    rd_si=final_rd if has_damping else 0.0,
-                    p_fg=p_fg, p_fsw=p_fsw, has_l2=has_l2_b2
-                )
+                    soa_png  = _make_soa_fig(
+                        l1_min=l1_min_val, l_max=l_max_val,
+                        c_max=c_max_reactive, p_fsw=p_fsw, p_fg=p_fg,
+                        ltot_ripple_limit=ltot_ripple_limit, lg=lg_b2,
+                        has_l2=has_l2_b2, k_int=k_int,
+                        l_tot_design_mh=l_tot_design_mh, final_c=final_c,
+                        ltot_axis_max=ltot_axis_max, cf_axis_max=cf_axis_max_b2
+                    )
+                    bode_png = _make_bode_fig(
+                        l1_si=l1_si, l2_si=l2_locked*1e-3,
+                        lg=lg_b2, cf_si=cf_si,
+                        rd_si=final_rd if has_damping else 0.0,
+                        p_fg=p_fg, p_fsw=p_fsw, has_l2=has_l2_b2
+                    )
 
-                if report_fmt == "Word (.docx)":
-                    report_bytes = _gen_word_report(rp, soa_png, bode_png, fig_soa=fig_soa)
-                    fname = f"LCL_Design_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.docx"
-                    mime  = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                else:
-                    report_bytes = _gen_pdf_report(rp, soa_png, bode_png, fig_soa=fig_soa)
-                    fname = f"LCL_Design_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-                    mime  = "application/pdf"
+                    if report_fmt == "Word (.docx)":
+                        report_bytes = _gen_word_report(rp, soa_png, bode_png, fig_soa=fig_soa)
+                        fname = f"LCL_Design_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.docx"
+                        mime  = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    else:
+                        report_bytes = _gen_pdf_report(rp, soa_png, bode_png, fig_soa=fig_soa)
+                        fname = f"LCL_Design_Report_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                        mime  = "application/pdf"
 
-                st.success("✅ Report generated successfully!")
-                st.download_button(
-                    label=f"⬇️ Download {report_fmt.split()[0]} Report",
-                    data=report_bytes, file_name=fname, mime=mime,
-                    use_container_width=True
-                )
-            except Exception as e:
-                st.error(f"❌ Report generation failed: {str(e)}")
-                st.exception(e)
+                    st.success("✅ Report generated successfully!")
+                    st.download_button(
+                        label=f"⬇️ Download {report_fmt.split()[0]} Report",
+                        data=report_bytes, file_name=fname, mime=mime,
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"❌ Report generation failed: {str(e)}")
+                    st.exception(e)
 
 
 
@@ -1551,11 +1562,14 @@ elif selection == nav_options[2]:
 
             # ✅ Optimization 2: show results directly in SCR mode
             st.divider()
-            col_lg1, col_lg2 = st.columns([3, 2])
-            with col_lg1:
-                st.metric(label="📐 Equivalent External Leakage $L_g$", value=f"{lg * 1000:.2f} mH")
-            with col_lg2:
-                st.metric(label="📊 Grid Point SCR", value=f"{eq_scr:.1f}")
+            if is_trial:
+                trial_lock("Calculation results require paid access")
+            else:
+                col_lg1, col_lg2 = st.columns([3, 2])
+                with col_lg1:
+                    st.metric(label="📐 Equivalent External Leakage $L_g$", value=f"{lg * 1000:.2f} mH")
+                with col_lg2:
+                    st.metric(label="📊 Grid Point SCR", value=f"{eq_scr:.1f}")
 
         else:
             c_tx1, c_tx2 = st.columns(2)
@@ -1956,21 +1970,24 @@ elif selection == nav_options[3]:
         # ── Results preview ─────────────────────────────────────────────────
         st.divider()
         st.markdown("**5. Results Preview**")
-        prev_cols = st.columns(3)
-        with prev_cols[0]:
-            st.metric("Required Converter Phase Voltage", f"{req_v_phase:.1f} Vrms",
-                      help="Phase voltage Line-to-Neutral RMS")
-        with prev_cols[1]:
-            delta_v = limit_v - req_v_phase
-            if delta_v >= 0:
-                st.metric(f"{mod_label} Voltage Margin", f"+{delta_v:.1f} V",
-                          delta=f"Limit {limit_v:.1f} V", delta_color="normal")
-            else:
-                st.metric(f"{mod_label} Voltage Margin", f"{delta_v:.1f} V",
-                          delta=f"Limit {limit_v:.1f} V", delta_color="inverse")
-        with prev_cols[2]:
-            st.metric("Equivalent Total Reactance XL", f"{xl:.4f} Ω",
-                      help=f"XL1={xl1:.4f} Ω + XL2={xl2:.4f} Ω")
+        if is_trial:
+            trial_lock("Calculation results require paid access")
+        else:
+            prev_cols = st.columns(3)
+            with prev_cols[0]:
+                st.metric("Required Converter Phase Voltage", f"{req_v_phase:.1f} Vrms",
+                          help="Phase voltage Line-to-Neutral RMS")
+            with prev_cols[1]:
+                delta_v = limit_v - req_v_phase
+                if delta_v >= 0:
+                    st.metric(f"{mod_label} Voltage Margin", f"+{delta_v:.1f} V",
+                              delta=f"Limit {limit_v:.1f} V", delta_color="normal")
+                else:
+                    st.metric(f"{mod_label} Voltage Margin", f"{delta_v:.1f} V",
+                              delta=f"Limit {limit_v:.1f} V", delta_color="inverse")
+            with prev_cols[2]:
+                st.metric("Equivalent Total Reactance XL", f"{xl:.4f} Ω",
+                          help=f"XL1={xl1:.4f} Ω + XL2={xl2:.4f} Ω")
 
         with st.expander("📐 View Calculation Details"):
             st.markdown(
@@ -3964,15 +3981,18 @@ elif selection == nav_options[5]:
         else:
             res_ipp = 0
             res_ipk = 0
-            
+
+        if is_trial:
+            trial_lock("Ripple current results require paid access")
+        else:
             st.metric(" (Peak-to-Peak)", f"{res_ipp:.2f} A")
-        st.metric("amplitude (0-to-Peak)", f"{res_ipk:.2f} A")
-        
-        # 
-        i_ref = st.session_state['vec_i'] * np.sqrt(2)
-        if i_ref > 0:
-            st.progress(min(res_ipp/i_ref, 1.0))
-            st.caption(f"rated {res_ipp/i_ref:.1%}")
+            st.metric("amplitude (0-to-Peak)", f"{res_ipk:.2f} A")
+
+            #
+            i_ref = st.session_state['vec_i'] * np.sqrt(2)
+            if i_ref > 0:
+                st.progress(min(res_ipp/i_ref, 1.0))
+                st.caption(f"rated {res_ipp/i_ref:.1%}")
 
     st.divider()
 
@@ -5005,10 +5025,13 @@ elif selection == nav_options[6]:
         # 1:  —  GB/T 14549 Result(2)
         # ════════════════════════════════════════════════════════════════════════
         st.markdown("### 🔍 summary")
+        if is_trial:
+            trial_lock("Harmonic verification results require paid access")
 
         # ── 1: IEEE 519  ──────────────────────────────────────────────
         # Fix:  HTML  st.metric,  delta "..."
-        st.markdown("**IEEE 519-2022**")
+        if not is_trial:
+            st.markdown("**IEEE 519-2022**")
 
         def _card(icon, title, value, note, pass_flag=None):
             """render"""
@@ -5026,33 +5049,34 @@ elif selection == nav_options[6]:
               <div style="font-size:12px; color:#444; line-height:1.4; word-break:break-all;">{note}</div>
             </div>"""
 
-        col_v1, col_v2, col_v3, col_v4 = st.columns(4)
-        with col_v1:
-            st.markdown(_card(
-                "📊", "IEEE TDD()",
-                f"{tdd_calc:.2f}%",
- f"{'✅ ' if tdd_pass else '❌ Exceeds Limit'} | {tdd_limit:.1f}%({scr_label})",
-                tdd_pass), unsafe_allow_html=True)
-        with col_v2:
-            st.markdown(_card(
-                "🔢", f"Switching Frequencyharmonic({sw_order:.0f})",
-                f"{tdd_sw:.2f}% TDD",
- f"{'✅ ' if sw_pass else '❌ Exceeds Limit'} | {limit_sw_pct:.1f}%",
-                sw_pass), unsafe_allow_html=True)
-        with col_v3:
-            fres_str = f"{_f_res:.0f} Hz" if _f_res > 0 else "N/A"
-            st.markdown(_card(
-                "📐", "LCL Resonance Frequency",
-                fres_str,
- f"{'✅ range' if f_res_ok else '⚠️ exceedsrange'} | requirement {10*h7_fg:.0f}~{0.5*h7_fsw:.0f} Hz",
-                f_res_ok if _f_res > 0 else None), unsafe_allow_html=True)
-        with col_v4:
-            st.markdown(_card(
- "⚡", "topology / modulation",
-                "3-Level" if _is_3level else "2-Level",
- f"modulation mₐ = {fft_ma:.3f} | Switching Frequency fsw = {h7_fsw:.0f} Hz",
-                None), unsafe_allow_html=True)
-        st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+        if not is_trial:
+            col_v1, col_v2, col_v3, col_v4 = st.columns(4)
+            with col_v1:
+                st.markdown(_card(
+                    "📊", "IEEE TDD()",
+                    f"{tdd_calc:.2f}%",
+                    f"{'✅ ' if tdd_pass else '❌ Exceeds Limit'} | {tdd_limit:.1f}%({scr_label})",
+                    tdd_pass), unsafe_allow_html=True)
+            with col_v2:
+                st.markdown(_card(
+                    "🔢", f"Switching Frequencyharmonic({sw_order:.0f})",
+                    f"{tdd_sw:.2f}% TDD",
+                    f"{'✅ ' if sw_pass else '❌ Exceeds Limit'} | {limit_sw_pct:.1f}%",
+                    sw_pass), unsafe_allow_html=True)
+            with col_v3:
+                fres_str = f"{_f_res:.0f} Hz" if _f_res > 0 else "N/A"
+                st.markdown(_card(
+                    "📐", "LCL Resonance Frequency",
+                    fres_str,
+                    f"{'✅ range' if f_res_ok else '⚠️ exceedsrange'} | requirement {10*h7_fg:.0f}~{0.5*h7_fsw:.0f} Hz",
+                    f_res_ok if _f_res > 0 else None), unsafe_allow_html=True)
+            with col_v4:
+                st.markdown(_card(
+                    "⚡", "topology / modulation",
+                    "3-Level" if _is_3level else "2-Level",
+                    f"modulation mₐ = {fft_ma:.3f} | Switching Frequency fsw = {h7_fsw:.0f} Hz",
+                    None), unsafe_allow_html=True)
+            st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
 
         #  GB/T LCL 
         # GB/T 25, 25 I_h = I_5_user * 5/h 
@@ -5472,27 +5496,30 @@ elif selection == nav_options[6]:
                     # ── Parameter ────────────────────────────────────────────────
                             st.success("✅ Parameterrecommended(, error ±15%, simulationverification)")
 
-                    col_o1, col_o2, col_o3, col_o4 = st.columns(4)
-                    with col_o1:
-                        st.markdown(_card("🔵", "recommended L1",
-                            f"{L1_opt*1e3:.3f} mH",
- f" {h7_l1:.3f} mH | L1/L2 = {r_opt:.1f}(Beres 2016)",
-                            None), unsafe_allow_html=True)
-                    with col_o2:
-                        st.markdown(_card("🟣", "recommended L2",
-                            f"{L2_opt*1e3:.3f} mH",
- f" {h7_l2:.3f} mH | L_total = {L_total*1e3:.3f} mH",
-                            None), unsafe_allow_html=True)
-                    with col_o3:
-                        st.markdown(_card("🟠", "recommended Cf",
-                            f"{Cf_opt*1e6:.2f} μF",
- f" {h7_cf:.2f} μF | {Cf_opt/C_base*100:.1f}% C_base(≤5%)",
-                            None), unsafe_allow_html=True)
-                    with col_o4:
-                        st.markdown(_card("📐", " fres",
-                            f"{fres_opt:.0f} Hz",
- f"{'✅ range' if fres_ok_opt else '⚠️ exceedsrange'} | requirement {10*h7_fg:.0f}~{0.5*h7_fsw:.0f} Hz",
-                            fres_ok_opt if fres_opt > 0 else None), unsafe_allow_html=True)
+                    if is_trial:
+                        trial_lock("Optimization results require paid access")
+                    else:
+                        col_o1, col_o2, col_o3, col_o4 = st.columns(4)
+                        with col_o1:
+                            st.markdown(_card("🔵", "recommended L1",
+                                f"{L1_opt*1e3:.3f} mH",
+                                f" {h7_l1:.3f} mH | L1/L2 = {r_opt:.1f}(Beres 2016)",
+                                None), unsafe_allow_html=True)
+                        with col_o2:
+                            st.markdown(_card("🟣", "recommended L2",
+                                f"{L2_opt*1e3:.3f} mH",
+                                f" {h7_l2:.3f} mH | L_total = {L_total*1e3:.3f} mH",
+                                None), unsafe_allow_html=True)
+                        with col_o3:
+                            st.markdown(_card("🟠", "recommended Cf",
+                                f"{Cf_opt*1e6:.2f} μF",
+                                f" {h7_cf:.2f} μF | {Cf_opt/C_base*100:.1f}% C_base(≤5%)",
+                                None), unsafe_allow_html=True)
+                        with col_o4:
+                            st.markdown(_card("📐", " fres",
+                                f"{fres_opt:.0f} Hz",
+                                f"{'✅ range' if fres_ok_opt else '⚠️ exceedsrange'} | requirement {10*h7_fg:.0f}~{0.5*h7_fsw:.0f} Hz",
+                                fres_ok_opt if fres_opt > 0 else None), unsafe_allow_html=True)
 
                     st.markdown("<div style='margin-top:10px'></div>", unsafe_allow_html=True)
 
@@ -5826,16 +5853,19 @@ engineeringrecommended: $Q_f$ systemratedcapacity **5%~20%**
 (Das J.C., *Power System Harmonics*, Wiley-IEEE, 2015, §6.3).
         """)
         col_s2a, col_s2b, col_s2c = st.columns(3)
-        with col_s2a:
-            st.metric("systemratedpower", f"{_Prated/1e3:.0f} kW")
         with col_s2b:
             Qf_pct = st.slider("filtercapacityratedcapacityratio (%)",
                                 1.0, 30.0, 10.0, 0.5, key="s8_qf")
-        with col_s2c:
-            Qf_total = _Prated * Qf_pct / 100.0
-            Qf_per_branch = Qf_total / n_filters
-            st.metric("capacity Qf", f"{Qf_per_branch/1e3:.1f} kVar",
-            delta=f"capacity {Qf_total/1e3:.1f} kVar")
+        Qf_total = _Prated * Qf_pct / 100.0
+        Qf_per_branch = Qf_total / n_filters
+        if is_trial:
+            trial_lock("System power and filter capacity results require paid access")
+        else:
+            with col_s2a:
+                st.metric("systemratedpower", f"{_Prated/1e3:.0f} kW")
+            with col_s2c:
+                st.metric("capacity Qf", f"{Qf_per_branch/1e3:.1f} kVar",
+                          delta=f"capacity {Qf_total/1e3:.1f} kVar")
 
         st.divider()
 
@@ -6114,41 +6144,44 @@ harmoniccurrentimpedance, **Allgrid, amplify**, :
         # ── 5:  ─────────────────────────────────────────────────────
         st.divider()
         st.markdown("#### ⚠️ designengineering")
-        for p in filter_params:
-            freq_err_pct = abs(p['f_tuned'] - p['f_n']) / p['f_n'] * 100
-            dist_to_lcl  = abs(p['f_n'] - f_res_lcl)
-            S_fund_kvar  = Ug_phase * p['Iq_fund'] * 3 / 1e3
+        if is_trial:
+            trial_lock("Filter design verification results require paid access")
+        else:
+            for p in filter_params:
+                freq_err_pct = abs(p['f_tuned'] - p['f_n']) / p['f_n'] * 100
+                dist_to_lcl  = abs(p['f_n'] - f_res_lcl)
+                S_fund_kvar  = Ug_phase * p['Iq_fund'] * 3 / 1e3
 
-            # Tuning Frequency(!)
-            near_antires = any(abs(p['f_n'] - f_pk) < 50 for f_pk, _ in top_peaks)
+                # Tuning Frequency(!)
+                near_antires = any(abs(p['f_n'] - f_pk) < 50 for f_pk, _ in top_peaks)
 
-            with st.expander(f" #{p['branch']}({p['h_n']}, {p['f_n']:.0f}Hz)design",
-                              expanded=True):
-                col_w1, col_w2, col_w3, col_w4 = st.columns(4)
-                with col_w1:
-                    ok1 = freq_err_pct < 0.1
-                    st.metric("Tuning Frequencyerror", f"{freq_err_pct:.3f}%",
-                    delta="✅ " if ok1 else "⚠ ",
-                               delta_color="normal" if ok1 else "inverse")
-                with col_w2:
-                    ok2 = dist_to_lcl > 50
-                    st.metric("LCLResonance Frequency", f"{dist_to_lcl:.0f} Hz",
-                    delta="✅ safety" if ok2 else f"⚠ LCLresonance{f_res_lcl:.0f}Hz!",
-                               delta_color="normal" if ok2 else "inverse")
-                with col_w3:
-                    ok3 = S_fund_kvar < _Prated * 0.15 / 1e3
-                    st.metric("injectionreactive", f"{S_fund_kvar:.1f} kVar",
-                    delta="✅ " if ok3 else "⚠ reactive",
-                               delta_color="normal" if ok3 else "inverse")
-                with col_w4:
-                    if near_antires:
-                        st.metric("resonance", "🔴 ",
-                        delta="resonance<50Hz",
-                                   delta_color="inverse")
-                    else:
-                        st.metric("resonance", "✅ safety",
-                        delta="resonance",
-                                   delta_color="normal")
+                with st.expander(f" #{p['branch']}({p['h_n']}, {p['f_n']:.0f}Hz)design",
+                                  expanded=True):
+                    col_w1, col_w2, col_w3, col_w4 = st.columns(4)
+                    with col_w1:
+                        ok1 = freq_err_pct < 0.1
+                        st.metric("Tuning Frequencyerror", f"{freq_err_pct:.3f}%",
+                                  delta="✅ " if ok1 else "⚠ ",
+                                  delta_color="normal" if ok1 else "inverse")
+                    with col_w2:
+                        ok2 = dist_to_lcl > 50
+                        st.metric("LCLResonance Frequency", f"{dist_to_lcl:.0f} Hz",
+                                  delta="✅ safety" if ok2 else f"⚠ LCLresonance{f_res_lcl:.0f}Hz!",
+                                  delta_color="normal" if ok2 else "inverse")
+                    with col_w3:
+                        ok3 = S_fund_kvar < _Prated * 0.15 / 1e3
+                        st.metric("injectionreactive", f"{S_fund_kvar:.1f} kVar",
+                                  delta="✅ " if ok3 else "⚠ reactive",
+                                  delta_color="normal" if ok3 else "inverse")
+                    with col_w4:
+                        if near_antires:
+                            st.metric("resonance", "🔴 ",
+                                      delta="resonance<50Hz",
+                                      delta_color="inverse")
+                        else:
+                            st.metric("resonance", "✅ safety",
+                                      delta="resonance",
+                                      delta_color="normal")
 
                 st.caption(f"""
 Tuning Frequency: {p['f_tuned']:.2f} Hz(target {p['f_n']:.0f} Hz)|
@@ -6291,25 +6324,28 @@ helpdesignsafety.
                 if f_ar_min <= f_d <= f_ar_max:
                     swept_danger.add(h_d)
 
-            # 
-            col_ar1, col_ar2, col_ar3 = st.columns(3)
-            with col_ar1:
-                st.metric("resonancefrequencyrange",
-                           f"{f_ar_min:.0f} ~ {f_ar_max:.0f} Hz",
-                           delta=f" {f_ar_max - f_ar_min:.0f} Hz")
-            with col_ar2:
-                st.metric("Harmonic Orderrange",
- f"{f_ar_min/_fg:.1f} ~ {f_ar_max/_fg:.1f} ")
-            with col_ar3:
-                if swept_danger:
-                    danger_str = ', '.join([f"{h}" for h in sorted(swept_danger)])
-                    st.metric("⚠ harmonic", danger_str,
-                    delta="resonanceharmonic!",
-                               delta_color="inverse")
-                else:
-                    st.metric("harmonic", "✅ safety",
-                    delta="resonanceharmonic",
-                               delta_color="normal")
+            #
+            if is_trial:
+                trial_lock("Resonance analysis results require paid access")
+            else:
+                col_ar1, col_ar2, col_ar3 = st.columns(3)
+                with col_ar1:
+                    st.metric("resonancefrequencyrange",
+                               f"{f_ar_min:.0f} ~ {f_ar_max:.0f} Hz",
+                               delta=f" {f_ar_max - f_ar_min:.0f} Hz")
+                with col_ar2:
+                    st.metric("Harmonic Orderrange",
+                               f"{f_ar_min/_fg:.1f} ~ {f_ar_max/_fg:.1f} ")
+                with col_ar3:
+                    if swept_danger:
+                        danger_str = ', '.join([f"{h}" for h in sorted(swept_danger)])
+                        st.metric("⚠ harmonic", danger_str,
+                                   delta="resonanceharmonic!",
+                                   delta_color="inverse")
+                    else:
+                        st.metric("harmonic", "✅ safety",
+                                   delta="resonanceharmonic",
+                                   delta_color="normal")
 
             if swept_danger:
                 st.error(f"""
@@ -6603,16 +6639,19 @@ Z_{grid,h} = R_g + j\omega_h L_g
         #  TDD
         tdd_total_no   = np.sqrt(sum(r['TDD_no']**2   for r in results))
         tdd_total_with = np.sqrt(sum(r['TDD_with']**2 for r in results))
-        col_t1, col_t2, col_t3 = st.columns(3)
-        col_t1.metric("TDD(filter)", f"{tdd_total_no:.2f}%",
-        delta="Exceeds Limit" if tdd_total_no > v_tdd_limit else "",
-                       delta_color="inverse" if tdd_total_no > v_tdd_limit else "normal")
-        col_t2.metric("TDD(filter)", f"{tdd_total_with:.2f}%",
-        delta=f"{'✅ ' if tdd_total_with<=v_tdd_limit else '❌ Exceeds Limit'}({v_tdd_limit}%)",
-                       delta_color="normal" if tdd_total_with <= v_tdd_limit else "inverse")
-        col_t3.metric("TDD ", f"{tdd_total_no-tdd_total_with:.2f}%",
-        delta=f" {(1-tdd_total_with/tdd_total_no)*100:.0f}% ↓" if tdd_total_no > 0 else "—",
-                       delta_color="normal")
+        if is_trial:
+            trial_lock("TDD verification results require paid access")
+        else:
+            col_t1, col_t2, col_t3 = st.columns(3)
+            col_t1.metric("TDD(filter)", f"{tdd_total_no:.2f}%",
+                          delta="Exceeds Limit" if tdd_total_no > v_tdd_limit else "",
+                          delta_color="inverse" if tdd_total_no > v_tdd_limit else "normal")
+            col_t2.metric("TDD(filter)", f"{tdd_total_with:.2f}%",
+                          delta=f"{'✅ ' if tdd_total_with<=v_tdd_limit else '❌ Exceeds Limit'}({v_tdd_limit}%)",
+                          delta_color="normal" if tdd_total_with <= v_tdd_limit else "inverse")
+            col_t3.metric("TDD ", f"{tdd_total_no-tdd_total_with:.2f}%",
+                          delta=f" {(1-tdd_total_with/tdd_total_no)*100:.0f}% ↓" if tdd_total_no > 0 else "—",
+                          delta_color="normal")
 
         still_fail = [r for r in results if not r['pass_with']]
         if still_fail:
@@ -6707,23 +6746,25 @@ Z_{grid,h} = R_g + j\omega_h L_g
 
         st.plotly_chart(fig_wf, use_container_width=True)
 
-        # 
-        col_wf1, col_wf2 = st.columns(2)
-        with col_wf1:
-            # 
-            peak_no   = np.max(np.abs(i_wf_no_filter))
-            peak_with = np.max(np.abs(i_wf_with_filter))
-            peak_ideal = v_il
-            crest_err_no   = abs(peak_no - peak_ideal) / peak_ideal * 100
-            crest_err_with = abs(peak_with - peak_ideal) / peak_ideal * 100
-            st.metric("(filter)",
-                       f"{crest_err_no:.1f}%",
-                       delta=f" {peak_no:.1f}A vs ideal {peak_ideal:.1f}A")
-        with col_wf2:
-            st.metric("(filter)",
-                       f"{crest_err_with:.1f}%",
-                       delta=f" {crest_err_no - crest_err_with:.1f}% ↓",
-                       delta_color="normal")
+        #
+        peak_no   = np.max(np.abs(i_wf_no_filter))
+        peak_with = np.max(np.abs(i_wf_with_filter))
+        peak_ideal = v_il
+        crest_err_no   = abs(peak_no - peak_ideal) / peak_ideal * 100
+        crest_err_with = abs(peak_with - peak_ideal) / peak_ideal * 100
+        if is_trial:
+            trial_lock("Waveform peak comparison results require paid access")
+        else:
+            col_wf1, col_wf2 = st.columns(2)
+            with col_wf1:
+                st.metric("(filter)",
+                           f"{crest_err_no:.1f}%",
+                           delta=f" {peak_no:.1f}A vs ideal {peak_ideal:.1f}A")
+            with col_wf2:
+                st.metric("(filter)",
+                           f"{crest_err_with:.1f}%",
+                           delta=f" {crest_err_no - crest_err_with:.1f}% ↓",
+                           delta_color="normal")
 
         st.markdown("""
 > **description**: ideal(), filterwaveform, 
@@ -6796,12 +6837,15 @@ elif selection == nav_options[8]:
  "selection, , losscalculate, comparisongenerate."
     )
 
-    c_r1, c_r2, c_r3, c_r4, c_r5 = st.columns(5)
-    with c_r1: st.metric("L1()", f"{_L1_mH:.3f} mH")
-    with c_r2: st.metric("L2(Grid Side)",   f"{_L2_mH:.3f} mH")
-    with c_r3: st.metric("ratedcurrent",     f"{_IL_rms:.0f} Arms")
-    with c_r4: st.metric("bus", f"{_Vdc:.0f} V")
-    with c_r5: st.metric("Grid Voltage",     f"{_Vg_line:.0f} V")
+    if is_trial:
+        trial_lock("Design parameter results require paid access")
+    else:
+        c_r1, c_r2, c_r3, c_r4, c_r5 = st.columns(5)
+        with c_r1: st.metric("L1()", f"{_L1_mH:.3f} mH")
+        with c_r2: st.metric("L2(Grid Side)",   f"{_L2_mH:.3f} mH")
+        with c_r3: st.metric("ratedcurrent",     f"{_IL_rms:.0f} Arms")
+        with c_r4: st.metric("bus", f"{_Vdc:.0f} V")
+        with c_r5: st.metric("Grid Voltage",     f"{_Vg_line:.0f} V")
     st.divider()
 
     # [M2]  TAB2 ,  4  Tab
@@ -7784,14 +7828,17 @@ elif selection == nav_options[8]:
                 # ()
                 N9_show = d9_L_H * I9_rated_pk / (Bop9 * Ae9_m2) if (Bop9*Ae9_m2)>0 else 1.0
 
-            c1,c2,c3,c4,c5 = st.columns(5)
-            c1.metric("Turns N", f"{N9} ")
-            c2.metric("Ae",         f"{Ae9:.1f} cm²")
-            c3.metric("theoreticalAir Gap",   f"{dlt9_bmm:.2f} mm")
-            c4.metric("Air Gap", f"{dlt9_cmm:.2f} mm")
-            c5.metric("rated", f"{B9_rated_pk:.3f} T",
-        delta=f"{(Bop9-B9_rated_pk)/Bop9*100:.1f}%",
-                       delta_color="normal" if B9_rated_pk<=Bop9 else "inverse")
+            if is_trial:
+                trial_lock("Core design results require paid access")
+            else:
+                c1,c2,c3,c4,c5 = st.columns(5)
+                c1.metric("Turns N", f"{N9} ")
+                c2.metric("Ae",         f"{Ae9:.1f} cm²")
+                c3.metric("theoreticalAir Gap",   f"{dlt9_bmm:.2f} mm")
+                c4.metric("Air Gap", f"{dlt9_cmm:.2f} mm")
+                c5.metric("rated", f"{B9_rated_pk:.3f} T",
+                           delta=f"{(Bop9-B9_rated_pk)/Bop9*100:.1f}%",
+                           delta_color="normal" if B9_rated_pk<=Bop9 else "inverse")
 
             if dlt9_cmm < 0.5:
                 st.warning("⚠ Air Gap<0.5mm, suggestionconfirmation(requirement).")
@@ -7849,15 +7896,18 @@ elif selection == nav_options[8]:
             st.markdown("**② designresultsummary**")
 
             # Result
-            res_col1, res_col2, res_col3, res_col4, res_col5 = st.columns(5)
-            res_col1.metric("Turns N", f"{N9} ",
-        help=f"N = L×Ipk_rated/(B_op×Ae), rated={I9_rated_pk:.0f}Apk")
-            res_col2.metric(" t", f"{foil9_t:.1f} mm")
-            res_col3.metric(" w", f"{foil9_w:.0f} mm",
-                            help=f"=min(lw-, S/t), {ins_edge9:.0f}mm")
-            res_col4.metric("actual S", f"{S9:.1f} mm²",
-                            help=f"S = t×w = {foil9_t:.1f}×{foil9_w:.0f}")
-            res_col5.metric("actualcurrent J", f"{J9_actual:.2f} A/mm²")
+            if is_trial:
+                trial_lock("Winding design results require paid access")
+            else:
+                res_col1, res_col2, res_col3, res_col4, res_col5 = st.columns(5)
+                res_col1.metric("Turns N", f"{N9} ",
+                    help=f"N = L×Ipk_rated/(B_op×Ae), rated={I9_rated_pk:.0f}Apk")
+                res_col2.metric(" t", f"{foil9_t:.1f} mm")
+                res_col3.metric(" w", f"{foil9_w:.0f} mm",
+                                help=f"=min(lw-, S/t), {ins_edge9:.0f}mm")
+                res_col4.metric("actual S", f"{S9:.1f} mm²",
+                                help=f"S = t×w = {foil9_t:.1f}×{foil9_w:.0f}")
+                res_col5.metric("actualcurrent J", f"{J9_actual:.2f} A/mm²")
 
             st.markdown(f"""
 | Parameter | | description |
@@ -7995,16 +8045,19 @@ $$\\boxed{{P_{{Cu}} = {Pcuf9:.1f}+{Pcuhf9:.1f} = {Pcu9:.1f}\\,\\text{{W}}}}$$
                     ]
                     st.markdown("  \n".join(_fe_lines))
 
-            c1,c2,c3,c4,c5 = st.columns(5)
-            c1.metric("Copper Loss P_Cu",   f"{Pcu9:.1f} W")
-            c2.metric("Core Loss P_Fe",   f"{Pfe9:.1f} W")
-            c3.metric("loss", f"{Ptot9:.1f} W")
-            c4.metric("/Core Loss", f"{cufr9:.2f}",
-                      delta="✅" if 0.33<=cufr9<=3 else "optimization⚠",
-                      delta_color="normal" if 0.33<=cufr9<=3 else "off")
-            c5.metric("Temperature Rise", f"{dT9:.0f} K",
-                      delta=f"{T9_lim}K {'✅' if cool_ok9 else '⚠'}",
-                      delta_color="normal" if cool_ok9 else "inverse")
+            if is_trial:
+                trial_lock("Loss calculation results require paid access")
+            else:
+                c1,c2,c3,c4,c5 = st.columns(5)
+                c1.metric("Copper Loss P_Cu",   f"{Pcu9:.1f} W")
+                c2.metric("Core Loss P_Fe",   f"{Pfe9:.1f} W")
+                c3.metric("loss", f"{Ptot9:.1f} W")
+                c4.metric("/Core Loss", f"{cufr9:.2f}",
+                          delta="✅" if 0.33<=cufr9<=3 else "optimization⚠",
+                          delta_color="normal" if 0.33<=cufr9<=3 else "off")
+                c5.metric("Temperature Rise", f"{dT9:.0f} K",
+                          delta=f"{T9_lim}K {'✅' if cool_ok9 else '⚠'}",
+                          delta_color="normal" if cool_ok9 else "inverse")
 
             if not cool_ok9:
                 st.warning(
@@ -8201,22 +8254,25 @@ $$\\boxed{{P_{{Cu}} = {Pcuf9:.1f}+{Pcuhf9:.1f} = {Pcu9:.1f}\\,\\text{{W}}}}$$
         I_sc_sw_pk    = I_sc_sw    * np.sqrt(2)
         I_sc_brk_pk   = I_sc_breaker * np.sqrt(2)
 
-        col_sc1, col_sc2, col_sc3 = st.columns(3)
-        with col_sc1:
-            st.metric("IGBT Desat protectioncurrent",
-                       f"{I_sc_igbt:.0f} A / {I_sc_igbt_pk:.0f} Apk",
-                       help=" 2× ratedcurrent,  < 10μs, IGBT off")
-            st.caption(": < 10 μs")
-        with col_sc2:
-            st.metric("overcurrentprotectioncurrent",
-                       f"{I_sc_sw:.0f} A / {I_sc_sw_pk:.0f} Apk",
-                       help=" 3× ratedcurrent,  1~10ms, PWM duty cycle")
-            st.caption(": 1~10 ms")
-        with col_sc3:
-            st.metric("protectioncurrent",
-                       f"{I_sc_breaker:.0f} A / {I_sc_brk_pk:.0f} Apk",
-                       help=" 5× ratedcurrent,  50~100ms, Grid Side")
-            st.caption(": 50~100 ms · IEC 60076-6 §3.1.3")
+        if is_trial:
+            trial_lock("Protection current results require paid access")
+        else:
+            col_sc1, col_sc2, col_sc3 = st.columns(3)
+            with col_sc1:
+                st.metric("IGBT Desat protectioncurrent",
+                           f"{I_sc_igbt:.0f} A / {I_sc_igbt_pk:.0f} Apk",
+                           help=" 2× ratedcurrent,  < 10μs, IGBT off")
+                st.caption(": < 10 μs")
+            with col_sc2:
+                st.metric("overcurrentprotectioncurrent",
+                           f"{I_sc_sw:.0f} A / {I_sc_sw_pk:.0f} Apk",
+                           help=" 3× ratedcurrent,  1~10ms, PWM duty cycle")
+                st.caption(": 1~10 ms")
+            with col_sc3:
+                st.metric("protectioncurrent",
+                           f"{I_sc_breaker:.0f} A / {I_sc_brk_pk:.0f} Apk",
+                           help=" 5× ratedcurrent,  50~100ms, Grid Side")
+                st.caption(": 50~100 ms · IEC 60076-6 §3.1.3")
 
         st.caption(
  "Note: LCL filteractual, inverterprotection."
@@ -8305,7 +8361,9 @@ $$\\boxed{{P_{{Cu}} = {Pcuf9:.1f}+{Pcuhf9:.1f} = {Pcu9:.1f}\\,\\text{{W}}}}$$
  "."
         )
 
-        if st.button("📊 generatedesign(Excel)", key="r_gen_tds", type="primary"):
+        if is_trial:
+            trial_lock("Design sheet generation requires paid access")
+        elif st.button("📊 generatedesign(Excel)", key="r_gen_tds", type="primary"):
 
             # ── Sheet 1: Parameter
             tds_basic = {
@@ -9240,13 +9298,13 @@ designstandard(IEC 60384)Parameter,
             esr_mkp  = 3e-3 * (1 + (f_pl / 1e5) ** 0.3)
             esr_elec = 80e-3 * (50 / np.maximum(f_pl, 50)) ** 0.5 + 20e-3
             fig_esr = go.Figure()
-fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_mkp*1000, name='MKP ()',
-                                          line=dict(color='#198754', width=2.5)))
-fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_elec*1000, name='()',
-                                          line=dict(color='#dc3545', width=2.5, dash='dash')))
-fig_esr.add_vline(x=_fsw, line_dash='dot', line_color='#fd7e14',
-                               annotation_text=f'currentfsw={_fsw:.0f}Hz')
-fig_esr.update_layout(
+            fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_mkp*1000, name='MKP ()',
+                                         line=dict(color='#198754', width=2.5)))
+            fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_elec*1000, name='()',
+                                         line=dict(color='#dc3545', width=2.5, dash='dash')))
+            fig_esr.add_vline(x=_fsw, line_dash='dot', line_color='#fd7e14',
+                              annotation_text=f'currentfsw={_fsw:.0f}Hz')
+            fig_esr.update_layout(
                 title='ESR frequencycharacteristiccomparison()',
                 xaxis_title='Frequency (Hz)',
                 yaxis_title='ESR (mΩ)',
@@ -9255,13 +9313,13 @@ fig_esr.update_layout(
                 height=320,
                 template='plotly_white'
             )
-st.plotly_chart(fig_esr, use_container_width=True)
-st.caption("data: EPCOS B32xxx MKP data; Nichicon Parameter")
+            st.plotly_chart(fig_esr, use_container_width=True)
+            st.caption("data: EPCOS B32xxx MKP data; Nichicon Parameter")
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 2 — Parameter & dv/dt (v2, )
     # ══════════════════════════════════════════════════════════════════════════
-with tab_spec:
+    with tab_spec:
         st.markdown("### 📐 ratedParameter dv/dt ")
 
         # ── [Fix4] Y/Δ  ─────────────────────────────────────────────────
@@ -9404,12 +9462,15 @@ capacitorvoltagecurrent, Rated Voltagecomponent destruction!
         dvdt_conservative = s_vdc / (sL1 * sCf * s_omegasw) / 1e6 if (sL1 > 0 and sCf > 0) else 0.0
         dvdt_design = max(dvdt_actual, dvdt_conservative)
 
+        if is_trial:
+            trial_lock("Capacitor design results require paid access")
         col_p1, col_p2, col_p3 = st.columns(3)
         with col_p1:
             st.markdown("#### ① Rated Voltage")
-            st.metric("actualvoltage(correction)", f"{s_Uc:.1f} Vrms")
-            st.metric("recommendedRated Voltage(1.5×)", f"{Uc_std} Vrms AC",
-            delta="IEC 60831: 67%, recommended", delta_color="off")
+            if not is_trial:
+                st.metric("actualvoltage(correction)", f"{s_Uc:.1f} Vrms")
+                st.metric("recommendedRated Voltage(1.5×)", f"{Uc_std} Vrms AC",
+                          delta="IEC 60831: 67%, recommended", delta_color="off")
             if is_delta:
                 st.error(f"⚠ Δ!Rated Voltage**voltage {s_ug:.0f}V** , voltage!")
             else:
@@ -9445,10 +9506,12 @@ $$I_{{total}} = \\sqrt{{I_{{fund}}^2 + I_{{sw,rms}}^2}} = \\sqrt{{{Ic_fund:.2f}^
 
 > 📚 Liserre M. et al., IEEE Trans. Ind. Appl., 2005; IEC 61071 §6.5
                 """)
-                st.metric("current", f"{Ic_fund:.2f} Arms")
-                st.metric("Switching Frequency(Lg)", f"{Ic_sw_rms:.2f} Arms")
-                st.metric("ripple current(RSS)", f"{Ic_total:.2f} Arms")
-            st.warning(f"Rated Ripple Current ≥ **{Ic_rated_min:.1f} A**(1.2×Margin, IEC 61071 §6.5)")
+                if not is_trial:
+                    st.metric("current", f"{Ic_fund:.2f} Arms")
+                    st.metric("Switching Frequency(Lg)", f"{Ic_sw_rms:.2f} Arms")
+                    st.metric("ripple current(RSS)", f"{Ic_total:.2f} Arms")
+            if not is_trial:
+                st.warning(f"Rated Ripple Current ≥ **{Ic_rated_min:.1f} A**(1.2×Margin, IEC 61071 §6.5)")
 
         with col_p3:
             st.markdown("#### ③ reactive")
@@ -9474,9 +9537,10 @@ $$Q_{{3\\phi}} = 3 \\times Q_{{1\\phi}} = 3 \\times {Qc/1e3:.3f} = {Qc*3/1e3:.3f
 > engineering:  LCL filtergridinjectionCapacitivereactive, 
 > designconfirmationsystemreactivecapacity( ≤ 5% ratedactivepower).
                 """)
-                st.metric("design", f"{s_Cf:.1f} μF ±5%")
-                st.metric("single-phasereactive", f"{Qc/1e3:.3f} kVar")
-                st.metric("3-phasereactive", f"{Qc*3/1e3:.3f} kVar")
+                if not is_trial:
+                    st.metric("design", f"{s_Cf:.1f} μF ±5%")
+                    st.metric("single-phasereactive", f"{Qc/1e3:.3f} kVar")
+                    st.metric("3-phasereactive", f"{Qc*3/1e3:.3f} kVar")
 
         st.divider()
 
@@ -9596,13 +9660,13 @@ parallelselectionsatisfied: , ripple current, dv/dt constraint, .
                 )
 
                 st.markdown("**② capacitor**(recommended)")
-pa_Cn = st.number_input(" Cn(μF)", value=50.0, step=5.0, key="pa_cn")
-pa_Ir1 = st.number_input("Rated Ripple Current(A)", value=30.0, step=1.0, key="pa_ir1")
-pa_dvdt1 = st.number_input(" dv/dt rated(V/μs)", value=50.0, step=5.0, key="pa_dvdt1")
-pa_Un1 = st.number_input("Rated Voltage(Vrms)", value=float(Uc_std), step=50.0, key="pa_un1")
-pa_ESR1 = st.number_input(" ESR @ fsw(mΩ)", value=4.0, step=0.5, key="pa_esr1")
+                pa_Cn = st.number_input(" Cn(μF)", value=50.0, step=5.0, key="pa_cn")
+                pa_Ir1 = st.number_input("Rated Ripple Current(A)", value=30.0, step=1.0, key="pa_ir1")
+                pa_dvdt1 = st.number_input(" dv/dt rated(V/μs)", value=50.0, step=5.0, key="pa_dvdt1")
+                pa_Un1 = st.number_input("Rated Voltage(Vrms)", value=float(Uc_std), step=50.0, key="pa_un1")
+                pa_ESR1 = st.number_input(" ESR @ fsw(mΩ)", value=4.0, step=0.5, key="pa_esr1")
 
-with pa_col2:
+            with pa_col2:
                 st.markdown("**③ parallelcalculateresult**")
 
                 # 
@@ -9647,14 +9711,14 @@ with pa_col2:
                         st.success(f"✅ recommendedparallel: **{n_rec_even} **")
 
                     res_col1, res_col2, res_col3 = st.columns(3)
-res_col1.metric("parallel", f"{Cf_actual:.0f} μF",
+                    res_col1.metric("parallel", f"{Cf_actual:.0f} μF",
                                     delta=f"Margin +{margin_Cf:.0f}%", delta_color="normal")
-res_col2.metric("parallelrated", f"{Ir_actual:.0f} Arms",
+                    res_col2.metric("parallelrated", f"{Ir_actual:.0f} Arms",
                                     delta=f"Margin +{margin_Ir:.0f}%", delta_color="normal")
-res_col3.metric("parallelESR", f"{ESR_actual:.2f} mΩ",
-        delta=f"{pa_ESR1:.1f}mΩ ÷ {n_rec_even}", delta_color="off")
+                    res_col3.metric("parallelESR", f"{ESR_actual:.2f} mΩ",
+                                    delta=f"{pa_ESR1:.1f}mΩ ÷ {n_rec_even}", delta_color="off")
 
-st.markdown(f"""
+                    st.markdown(f"""
 **📋 selection(per phase)**
 
 | | value |
@@ -9667,38 +9731,38 @@ st.markdown(f"""
 | parallel ESR(per phase) | {ESR_actual:.2f} mΩ |
 | parallelthermal dissipation(single-phase, {pa_Ir_total:.0f}A) | {(pa_Ir_total**2 * ESR_actual * 1e-3):.1f} W |
 
-> ⚠ **parallel**: 
+> ⚠ **parallel**:
 > 1. parallelcapacitor****, impedanceripple current
-> 2. symmetric, 
+> 2. symmetric,
 > 3. units in parallel ±5% , suggestion
-> 4. power(≥6)suggestion, 
+> 4. power(≥6)suggestion,
                     """)
 
                     # : Inductive
-n_range = np.arange(1, min(n_min + 6, 21))
-margin_Cf_arr = (n_range * pa_Cn / pa_Cf_total - 1) * 100
-margin_Ir_arr = (n_range * pa_Ir1 / pa_Ir_total - 1) * 100
+                    n_range = np.arange(1, min(n_min + 6, 21))
+                    margin_Cf_arr = (n_range * pa_Cn / pa_Cf_total - 1) * 100
+                    margin_Ir_arr = (n_range * pa_Ir1 / pa_Ir_total - 1) * 100
 
-fig_pa = go.Figure()
-fig_pa.add_trace(go.Bar(x=n_range, y=margin_Cf_arr, name="Margin(%)",
+                    fig_pa = go.Figure()
+                    fig_pa.add_trace(go.Bar(x=n_range, y=margin_Cf_arr, name="Margin(%)",
                                             marker_color="#4dabf7", opacity=0.75))
-fig_pa.add_trace(go.Bar(x=n_range, y=margin_Ir_arr, name="ripple currentMargin(%)",
+                    fig_pa.add_trace(go.Bar(x=n_range, y=margin_Ir_arr, name="ripple currentMargin(%)",
                                             marker_color="#40c057", opacity=0.75))
-fig_pa.add_vline(x=n_rec_even, line_dash="dash", line_color="#e03131",
-                    annotation_text=f"recommended {n_rec_even} ")
-fig_pa.add_hline(y=0, line_color="#868e96", line_width=1)
-fig_pa.update_layout(
+                    fig_pa.add_vline(x=n_rec_even, line_dash="dash", line_color="#e03131",
+                                     annotation_text=f"recommended {n_rec_even} ")
+                    fig_pa.add_hline(y=0, line_color="#868e96", line_width=1)
+                    fig_pa.update_layout(
                         title="Parallel Count vs ParameterMargin",
                         xaxis_title="Parallel Count(per phase)", yaxis_title="Margin(%)",
                         barmode="group", height=280, template="plotly_white",
                         legend=dict(orientation="h", y=1.1)
                     )
-st.plotly_chart(fig_pa, use_container_width=True)
+                    st.plotly_chart(fig_pa, use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 3 — Ripple Current Analysis
     # ══════════════════════════════════════════════════════════════════════════
-with tab_ripple:
+    with tab_ripple:
         st.markdown("### 〰️ ripple currentanalysis")
         st.info("""
 ****: ripple currentcapacitorthermal dissipation($P = I_{ripple}^2 \\times ESR$).
@@ -9770,63 +9834,63 @@ Resonance Frequency $f_{res}$ axis, displayResonance Frequency——Resonance Fr
         """)
 
         fig_rip = make_subplots(rows=1, cols=2,
-                                 subplot_titles=("ripple current vs Cf()", "ripple current vs Resonance Frequency"))
-fig_rip.add_trace(go.Scatter(x=cf_scan_uF, y=Ic_fund_s, name="current",
-                                      line=dict(color="#0d6efd", width=2)), row=1, col=1)
-fig_rip.add_trace(go.Scatter(x=cf_scan_uF, y=Ic_sw_s, name="Switching Frequency",
-                                      line=dict(color="#fd7e14", width=2)), row=1, col=1)
-fig_rip.add_trace(go.Scatter(x=cf_scan_uF, y=Ic_tot_s, name="(RSS)",
-                                      line=dict(color="#6f42c1", width=2.5)), row=1, col=1)
-fig_rip.add_vline(x=r_Cf, line_dash="dot", line_color="#e03131",
-        annotation_text=f"currentCf={r_Cf:.0f}μF, ={cur_ic_tot:.1f}A",
-                           row=1, col=1)
-fig_rip.add_trace(go.Scatter(x=fres_s, y=Ic_tot_s, name=" vs fres",
-                                      line=dict(color="#6f42c1", width=2.5), showlegend=False), row=1, col=2)
-if cur_fres > 0:
+                                subplot_titles=("ripple current vs Cf()", "ripple current vs Resonance Frequency"))
+        fig_rip.add_trace(go.Scatter(x=cf_scan_uF, y=Ic_fund_s, name="current",
+                                     line=dict(color="#0d6efd", width=2)), row=1, col=1)
+        fig_rip.add_trace(go.Scatter(x=cf_scan_uF, y=Ic_sw_s, name="Switching Frequency",
+                                     line=dict(color="#fd7e14", width=2)), row=1, col=1)
+        fig_rip.add_trace(go.Scatter(x=cf_scan_uF, y=Ic_tot_s, name="(RSS)",
+                                     line=dict(color="#6f42c1", width=2.5)), row=1, col=1)
+        fig_rip.add_vline(x=r_Cf, line_dash="dot", line_color="#e03131",
+                          annotation_text=f"currentCf={r_Cf:.0f}μF, ={cur_ic_tot:.1f}A",
+                          row=1, col=1)
+        fig_rip.add_trace(go.Scatter(x=fres_s, y=Ic_tot_s, name=" vs fres",
+                                     line=dict(color="#6f42c1", width=2.5), showlegend=False), row=1, col=2)
+        if cur_fres > 0:
             fig_rip.add_vline(x=cur_fres, line_dash="dot", line_color="#e03131",
-                               annotation_text=f"currentfres={cur_fres:.0f}Hz", row=1, col=2)
+                              annotation_text=f"currentfres={cur_fres:.0f}Hz", row=1, col=2)
             fig_rip.add_vline(x=s_fsw, line_dash="dash", line_color="#868e96",
-                               annotation_text=f"fsw={s_fsw:.0f}Hz()", row=1, col=2)
-fig_rip.update_xaxes(title_text="Cf (μF)", row=1, col=1)
-fig_rip.update_xaxes(title_text="Resonance Frequency fres (Hz)", row=1, col=2)
-fig_rip.update_yaxes(title_text="current (Arms)", row=1, col=1)
-fig_rip.update_layout(height=380, template="plotly_white",
-                               legend=dict(yanchor="top", y=0.98, xanchor="left", x=0.01))
-st.plotly_chart(fig_rip, use_container_width=True)
+                              annotation_text=f"fsw={s_fsw:.0f}Hz()", row=1, col=2)
+        fig_rip.update_xaxes(title_text="Cf (μF)", row=1, col=1)
+        fig_rip.update_xaxes(title_text="Resonance Frequency fres (Hz)", row=1, col=2)
+        fig_rip.update_yaxes(title_text="current (Arms)", row=1, col=1)
+        fig_rip.update_layout(height=380, template="plotly_white",
+                              legend=dict(yanchor="top", y=0.98, xanchor="left", x=0.01))
+        st.plotly_chart(fig_rip, use_container_width=True)
 
         # Result()
-fsw_margin = cur_fres / s_fsw if s_fsw > 0 else 0
-if fsw_margin > 0:
+        fsw_margin = cur_fres / s_fsw if s_fsw > 0 else 0
+        if fsw_margin > 0:
             if fsw_margin < 0.3 or fsw_margin > 3.0:
                 fres_verdict = f"❌ **Resonance Frequency {cur_fres:.0f} Hz Switching Frequency {s_fsw:.0f} Hz**, filter, suggestionadjustment L Cf!"
             elif 0.3 <= fsw_margin < 0.5:
                 fres_verdict = f"⚠ Resonance Frequency {cur_fres:.0f} Hz (fsw {fsw_margin:.0%}), damping, suggestioncheckdampingdesign."
             else:
                 fres_verdict = f"✅ Resonance Frequency {cur_fres:.0f} Hz, Switching Frequency {fsw_margin:.0%}, resonance, design."
-else:
+        else:
             fres_verdict = "⚠ L2 Parameter(L2=0 calculateResonance Frequency)."
 
-st.markdown(f"**📋 stabilityResult**: {fres_verdict}")
-st.markdown(f"currentDesign Point: current **{cur_ic_fund:.1f} A**, Switching Frequency **{cur_ic_sw_rms:.1f} Arms**,  **{cur_ic_tot:.1f} Arms**."
- f"{', Cf design, lowerreactive; ' if cur_ic_fund > cur_ic_sw_rms else ', Cf design, suggestioncapacitor; '}"
- f"selectionRated Ripple Current ≥ **{cur_ic_tot * 1.2:.1f} Arms**(1.2× Margin).")
+        st.markdown(f"**📋 stabilityResult**: {fres_verdict}")
+        st.markdown(f"currentDesign Point: current **{cur_ic_fund:.1f} A**, Switching Frequency **{cur_ic_sw_rms:.1f} Arms**,  **{cur_ic_tot:.1f} Arms**."
+                    f"{', Cf design, lowerreactive; ' if cur_ic_fund > cur_ic_sw_rms else ', Cf design, suggestioncapacitor; '}"
+                    f"selectionRated Ripple Current ≥ **{cur_ic_tot * 1.2:.1f} Arms**(1.2× Margin).")
 
-st.divider()
+        st.divider()
 
-        # 
-st.markdown("#### 🎛️ harmoniccapacitorripple current")
-st.caption("""
+        #
+        st.markdown("#### 🎛️ harmoniccapacitorripple current")
+        st.caption("""
 ****: axisfrequency, axisfrequencycapacitorRMScurrent.
 ****(50/60Hz); ****PWMharmonic(Switching Frequency).
 RSSripple current.capacitorthermal dissipation, selectionRated Ripple CurrentRSS.
         """)
-from scipy.special import jv as bessel_j
-r_ma = st.number_input("modulation ma", min_value=0.5, max_value=1.15,
-                                value=0.9, step=0.01, key="s10r_ma",
-                                help="SPWM0.85~1.0; SVPWM1.15")
+        from scipy.special import jv as bessel_j
+        r_ma = st.number_input("modulation ma", min_value=0.5, max_value=1.15,
+                               value=0.9, step=0.01, key="s10r_ma",
+                               help="SPWM0.85~1.0; SVPWM1.15")
 
-harm_f_list, ic_h_list = [s_fg], [Ug_phase * omega1 * rCf]
-for m in range(1, 5):
+        harm_f_list, ic_h_list = [s_fg], [Ug_phase * omega1 * rCf]
+        for m in range(1, 5):
             for n in range(-3, 4):
                 f_h = m * s_fsw + n * s_fg
                 if f_h < s_fg * 2:
@@ -9844,39 +9908,39 @@ for m in range(1, 5):
                 harm_f_list.append(f_h)
                 ic_h_list.append(ic_h)
 
-harm_f_arr = np.array(harm_f_list)
-ic_h_arr   = np.array(ic_h_list)
-Ic_rss     = np.sqrt(np.sum(ic_h_arr**2))
+        harm_f_arr = np.array(harm_f_list)
+        ic_h_arr   = np.array(ic_h_list)
+        Ic_rss     = np.sqrt(np.sum(ic_h_arr**2))
 
-colors_bar = ["#0d6efd" if f == s_fg else "#dc3545" for f in harm_f_arr]
-fig_spec = go.Figure()
-fig_spec.add_trace(go.Bar(x=harm_f_arr, y=ic_h_arr, marker_color=colors_bar,
-                                   hovertemplate="%{x:.0f}Hz<br>%{y:.3f}Arms<extra></extra>"))
-fig_spec.add_hline(y=Ic_rss, line_dash="dash", line_color="#fd7e14",
-        annotation_text=f"RSS={Ic_rss:.2f}Arms(selectionrated≥{Ic_rss*1.2:.1f}A)")
-fig_spec.update_layout(title="filtercapacitorripple current(Individual Harmonics)",
-                                xaxis_title="Frequency (Hz)", yaxis_title="capacitorcurrent (Arms)",
-                                height=360, template="plotly_white")
-st.plotly_chart(fig_spec, use_container_width=True)
+        colors_bar = ["#0d6efd" if f == s_fg else "#dc3545" for f in harm_f_arr]
+        fig_spec = go.Figure()
+        fig_spec.add_trace(go.Bar(x=harm_f_arr, y=ic_h_arr, marker_color=colors_bar,
+                                  hovertemplate="%{x:.0f}Hz<br>%{y:.3f}Arms<extra></extra>"))
+        fig_spec.add_hline(y=Ic_rss, line_dash="dash", line_color="#fd7e14",
+                           annotation_text=f"RSS={Ic_rss:.2f}Arms(selectionrated≥{Ic_rss*1.2:.1f}A)")
+        fig_spec.update_layout(title="filtercapacitorripple current(Individual Harmonics)",
+                               xaxis_title="Frequency (Hz)", yaxis_title="capacitorcurrent (Arms)",
+                               height=360, template="plotly_white")
+        st.plotly_chart(fig_spec, use_container_width=True)
 
         # Result
-ic_fund_val = ic_h_arr[0]
-ic_hf_arr   = ic_h_arr[1:]
-ic_hf_rss   = np.sqrt(np.sum(ic_hf_arr**2))
-dominant_idx = np.argmax(ic_hf_arr) if len(ic_hf_arr) > 0 else 0
-dominant_f   = harm_f_arr[1:][dominant_idx] if len(ic_hf_arr) > 0 else 0
-dominant_ic  = ic_hf_arr[dominant_idx] if len(ic_hf_arr) > 0 else 0
+        ic_fund_val = ic_h_arr[0]
+        ic_hf_arr   = ic_h_arr[1:]
+        ic_hf_rss   = np.sqrt(np.sum(ic_hf_arr**2))
+        dominant_idx = np.argmax(ic_hf_arr) if len(ic_hf_arr) > 0 else 0
+        dominant_f   = harm_f_arr[1:][dominant_idx] if len(ic_hf_arr) > 0 else 0
+        dominant_ic  = ic_hf_arr[dominant_idx] if len(ic_hf_arr) > 0 else 0
 
-col_s1, col_s2, col_s3 = st.columns(3)
-col_s1.metric("current", f"{ic_fund_val:.2f} Arms")
-col_s2.metric("harmonicRSS", f"{ic_hf_rss:.2f} Arms")
-col_s3.metric("(RSS)", f"{Ic_rss:.2f} Arms",
-                       delta=f"selectionrated ≥ {Ic_rss*1.2:.1f} A", delta_color="off")
+        col_s1, col_s2, col_s3 = st.columns(3)
+        col_s1.metric("current", f"{ic_fund_val:.2f} Arms")
+        col_s2.metric("harmonicRSS", f"{ic_hf_rss:.2f} Arms")
+        col_s3.metric("(RSS)", f"{Ic_rss:.2f} Arms",
+                      delta=f"selectionrated ≥ {Ic_rss*1.2:.1f} A", delta_color="off")
 
-if dominant_ic > 0:
+        if dominant_ic > 0:
             hf_ratio = ic_hf_rss / Ic_rss
             st.markdown(f"""
-**📋 analysisResult**: 
+**📋 analysisResult**:
 
 - ****: harmonic **{dominant_f:.0f} Hz**({dominant_ic:.2f} Arms),  {int(round(dominant_f/s_fsw))}×fsw±{int(round(abs(dominant_f - round(dominant_f/s_fsw)*s_fsw)/s_fg))}×fg .
 - **thermal dissipation**: harmonic **{hf_ratio:.0%}**, {'(>50%), descriptionreactivecurrentthermal dissipation, lower Cf reactive.' if hf_ratio < 0.5 else '(>50%), switchingcapacitor, suggestion Cf L1 lower.'}
@@ -9888,7 +9952,7 @@ if dominant_ic > 0:
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 4 — ··(v2, )
     # ══════════════════════════════════════════════════════════════════════════
-with tab_life:
+    with tab_life:
         st.markdown("### 🌡️ predictionlifetimeevaluation")
 
         st.markdown(r"""
@@ -9962,16 +10026,19 @@ $$L = L_0 \times 2^{\frac{T_{max}-T_h}{10}} \times \left(\frac{U_{rated}}{U_{op}
                 L_years = L_tot / 8760
                 ripple_ratio = lc_Irms / lc_Ir if lc_Ir > 0 else 0.0
 
-                st.metric("thermal dissipation", f"{P_rip:.2f} W")
-                st.metric(" Th", f"{Th:.1f} °C",
-                          delta="✅ safety" if Th < lc_Tmax else f"❌ Tmax={lc_Tmax}°C",
-                          delta_color="normal" if Th < lc_Tmax else "inverse")
-                st.metric("ripple current", f"{ripple_ratio*100:.1f}%",
-                          delta="✅ satisfied" if ripple_ratio <= 1.0 else "❌ rated",
-                          delta_color="normal" if ripple_ratio <= 1.0 else "inverse")
-                st.metric("predictionlifetime", f"{L_tot/1e4:.1f}({L_years:.1f})",
-                          delta="✅ >20" if L_years >= 20 else "⚠ <20, optimization",
-                          delta_color="normal" if L_years >= 20 else "inverse")
+                if is_trial:
+                    trial_lock("Capacitor lifetime prediction results require paid access")
+                else:
+                    st.metric("thermal dissipation", f"{P_rip:.2f} W")
+                    st.metric(" Th", f"{Th:.1f} °C",
+                              delta="✅ safety" if Th < lc_Tmax else f"❌ Tmax={lc_Tmax}°C",
+                              delta_color="normal" if Th < lc_Tmax else "inverse")
+                    st.metric("ripple current", f"{ripple_ratio*100:.1f}%",
+                              delta="✅ satisfied" if ripple_ratio <= 1.0 else "❌ rated",
+                              delta_color="normal" if ripple_ratio <= 1.0 else "inverse")
+                    st.metric("predictionlifetime", f"{L_tot/1e4:.1f}({L_years:.1f})",
+                              delta="✅ >20" if L_years >= 20 else "⚠ <20, optimization",
+                              delta_color="normal" if L_years >= 20 else "inverse")
 
         else:
             # ── [Add2] Miner  ──────────────────────────────────
@@ -10025,15 +10092,18 @@ $$\\frac{1}{L_{total}} = \\sum_i \\frac{p_i}{L_i}$$
 
                 st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
-                col_mn1, col_mn2 = st.columns(2)
-                col_mn1.metric("lifetime(Miner)",
-                               f"{L_miner:.1f} ",
-                               delta="✅ >20, " if L_miner >= 20 else "⚠ <20, optimization",
-                               delta_color="normal" if L_miner >= 20 else "inverse")
-                col_mn2.metric("vs ",
-                               f"{calc_life(mission_data[0][1], mission_data[0][2], mission_data[0][3])[1]/8760:.1f}",
-                               delta=f"evaluation({L_miner/max(calc_life(mission_data[0][1], mission_data[0][2], mission_data[0][3])[1]/8760,0.1):.1f}×)",
-                               delta_color="normal")
+                if is_trial:
+                    trial_lock("Lifetime analysis results require paid access")
+                else:
+                    col_mn1, col_mn2 = st.columns(2)
+                    col_mn1.metric("lifetime(Miner)",
+                                   f"{L_miner:.1f} ",
+                                   delta="✅ >20, " if L_miner >= 20 else "⚠ <20, optimization",
+                                   delta_color="normal" if L_miner >= 20 else "inverse")
+                    col_mn2.metric("vs ",
+                                   f"{calc_life(mission_data[0][1], mission_data[0][2], mission_data[0][3])[1]/8760:.1f}",
+                                   delta=f"evaluation({L_miner/max(calc_life(mission_data[0][1], mission_data[0][2], mission_data[0][3])[1]/8760,0.1):.1f}×)",
+                                   delta_color="normal")
 
                 if L_miner < 20:
                     st.warning("currentselectionactuallifetime20, suggestionRated Voltage.")
@@ -10059,15 +10129,15 @@ $$\\frac{1}{L_{total}} = \\sum_i \\frac{p_i}{L_i}$$
             fig_lf.add_trace(go.Scatter(x=[Th_cur], y=[L_cur], mode="markers",
                                          marker=dict(size=14, color="#dc3545", symbol="star"),
                                          name=f"current({L_cur:.1f})"))
-fig_lf.update_layout(title="lifetime-(n=7, MKP)",
-        xaxis_title=" Th (°C)", yaxis_title="predictionlifetime()",
-                                   height=360, template="plotly_white")
-st.plotly_chart(fig_lf, use_container_width=True)
+            fig_lf.update_layout(title="lifetime-(n=7, MKP)",
+                                  xaxis_title=" Th (°C)", yaxis_title="predictionlifetime()",
+                                  height=360, template="plotly_white")
+            st.plotly_chart(fig_lf, use_container_width=True)
 
     # ══════════════════════════════════════════════════════════════════════════
     # TAB 5 — AI & (v2, )
     # ══════════════════════════════════════════════════════════════════════════
-with tab_upload:
+    with tab_upload:
 
         # ── [Add3]  ─────────────────────────────────────────────
         st.markdown("### 🏭 selectionrecommended")
