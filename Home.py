@@ -30,14 +30,41 @@ st.title("⚡ LCL Filter Automated Design Platform")
 st.markdown("Built for **power electronics hardware engineers** · Full workflow from parameter design to hardware implementation")
 
 # ── Tabs ─────────────────────────────────────────────────
-tab_demo, tab_register, tab_login = st.tabs([
+tab_trial, tab_demo, tab_register, tab_login = st.tabs([
+    "🎁 Free Trial",
     "🎬 About",
     "🚀 Get Started (Free)",
     "🔐 Login",
 ])
 
 # ──────────────────────────────────────────────────────────
-# Tab 1: About
+# Tab 1: Free Trial
+# ──────────────────────────────────────────────────────────
+with tab_trial:
+    st.markdown("### 🎁 Try Before You Register")
+    st.markdown(
+        "No registration needed. Try the full workflow — all inputs, formulas, and SOA feasibility maps "
+        "are accessible. Detailed calculation results require a paid account."
+    )
+    st.markdown(
+        """
+        ✅ Experience the complete parameter input & interactive workflow
+        ✅ View all theoretical formulas & SOA feasibility maps
+        🔒 Recommended parameters, calculation results & design reports require paid access
+        """
+    )
+    if st.button("▶ Start Free Trial", use_container_width=True, type="primary"):
+        st.session_state["authentication_status"] = "trial"
+        st.session_state["name"] = "Trial User"
+        st.session_state["username"] = "__trial__"
+        st.session_state["session_token"] = "__trial__"
+        try:
+            st.switch_page("pages/01_LCL_Filter_Design.py")
+        except Exception:
+            st.success("✅ Trial mode activated! Click 'LCL Filter Design' in the sidebar.")
+
+# ──────────────────────────────────────────────────────────
+# Tab 2: About
 # ──────────────────────────────────────────────────────────
 with tab_demo:
 

@@ -18,28 +18,62 @@ from utils.vector_algo import calculate_vector_analysis
 # ==========================================
 st.set_page_config(page_title="LCL Filter & Inverter Design", page_icon="⚡", layout="wide")
 
-# ======== Session Guard ========
-if not st.session_state.get("authentication_status"):
+# ======== Authentication & Trial Lock ========
+auth_status = st.session_state.get("authentication_status")
+
+if not auth_status:
     st.warning("🔒 You are not logged in or your account is not activated.")
-    st.error("👉 Please click 'Home' in the left sidebar to go back and log in.")
+    st.error("👉 Please click 'Home' in the sidebar to log in or start a free trial.")
     st.stop()
 
-current_username = st.session_state.get("username")
-local_token = st.session_state.get("session_token")
+is_trial = (auth_status == "trial")
 
-try:
-    db_token = db_utils.get_session_token(current_username)
-    if local_token and db_token and local_token != db_token:
-        st.session_state["authentication_status"] = False
-        st.session_state["session_token"] = None
-        st.error("🚨 Warning: Your account has been logged in from another device!")
+if not is_trial:
+    current_username = st.session_state.get("username")
+    local_token = st.session_state.get("session_token")
+    try:
+        db_token = db_utils.get_session_token(current_username)
+        if local_token and db_token and local_token != db_token:
+            st.session_state["authentication_status"] = False
+            st.session_state["session_token"] = None
+            st.error("🚨 Warning: Your account has been logged in on another device!")
+            st.stop()
+    except Exception:
+        st.error("System busy, please try again later.")
         st.stop()
-except Exception as e:
-    st.error("System busy, please try again later.")
-    st.stop()
-# ======== Session Guard End ========
+# ======== Authentication & Trial Lock End ========
 
-st.success(f"⚡ Welcome, Engineer: {st.session_state.get('name')}!")
+
+def trial_lock(label="This feature requires a paid account", compact=False):
+    """Trial mode lock component - shows a locked card instead of actual results."""
+    pad = "14px 16px" if compact else "24px 18px"
+    icon_size = "20px" if compact else "26px"
+    st.markdown(
+        f"""
+        <div style="
+            background: repeating-linear-gradient(
+                45deg, #f5f5f5, #f5f5f5 10px, #ececec 10px, #ececec 20px);
+            border: 1.5px dashed #faad14;
+            border-radius: 10px;
+            padding: {pad};
+            text-align: center;
+            margin: 6px 0 14px 0;
+        ">
+            <div style="font-size:{icon_size}; margin-bottom:6px;">🔒</div>
+            <div style="font-weight:bold; font-size:14px; color:#333; margin-bottom:4px;">{label}</div>
+            <div style="color:#888; font-size:12px; margin-bottom:12px;">
+                Purchase to unlock all features — one-time payment, lifetime access
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+if is_trial:
+    st.info("🎁 You are in Free Trial mode. Some features are locked. [Purchase to unlock all features →](mailto:gpy1090@gmail.com)")
+else:
+    st.success(f"⚡ Welcome back, {st.session_state.get('name')}!")
 
 # ==========================================
 # Global state initialization
