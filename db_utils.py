@@ -1,6 +1,7 @@
 import sqlite3
 import bcrypt
 import hashlib
+import requests
 
 DB_NAME = 'lcl_users.db'
 
@@ -72,23 +73,60 @@ def get_all_users_for_auth():
     return credentials
 
 
+def validate_license_key(license_key: str) -> tuple:
+    """Call Lemonsqueezy API to validate a license key."""
+    try:
+        response = requests.post(
+            "https://api.lemonsqueezy.com/v1/licenses/validate",
+            json={"license_key": license_key},
+            headers={"Accept": "application/json"},
+            timeout=10
+        )
+        data = response.json()
+        if data.get("valid"):
+            activation_usage = data.get("license_key", {}).get("activation_usage", 0)
+            activation_limit = data.get("license_key", {}).get("activation_limit", 1)
+            if activation_limit is not None and activation_usage >= activation_limit:
+                return False, "This license key has already been used."
+            return True, "valid"
+        else:
+            return False, "Invalid or expired license key."
+    except Exception as e:
+        return False, f"Verification failed, please try again. ({str(e)})"
+
+
+def activate_license_key(license_key: str) -> bool:
+    """Call Lemonsqueezy API to consume one activation for the license key."""
+    try:
+        response = requests.post(
+            "https://api.lemonsqueezy.com/v1/licenses/activate",
+            json={"license_key": license_key, "instance_name": "powertool"},
+            headers={"Accept": "application/json"},
+            timeout=10
+        )
+        return response.json().get("activated", False)
+    except Exception:
+        return False
+
+
 def register_new_user(username, email, name, plain_password, activation_code):
     """Register a new user with activation code verification."""
+    # Validate license key: free trial code uses DB; real licenses use Lemonsqueezy API
+    if activation_code == FREE_TRIAL_CODE:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_used FROM activation_codes WHERE code = ?", (activation_code,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return False, "❌ Invalid access code. Please check and try again."
+        conn.close()
+    else:
+        valid, msg = validate_license_key(activation_code)
+        if not valid:
+            return False, f"❌ {msg}"
+
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
-    # Check activation code exists
-    cursor.execute("SELECT is_used FROM activation_codes WHERE code = ?", (activation_code,))
-    result = cursor.fetchone()
-
-    if result is None:
-        conn.close()
-        return False, "❌ Invalid access code. Please check and try again."
-
-    # Free trial code is never marked as used — skip the used check
-    if activation_code != FREE_TRIAL_CODE and result[0] == 1:
-        conn.close()
-        return False, "❌ This access code has already been used."
 
     # Check username not taken
     cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
@@ -103,14 +141,11 @@ def register_new_user(username, email, name, plain_password, activation_code):
             "INSERT INTO users (username, email, name, password) VALUES (?, ?, ?, ?)",
             (username, email, name, hashed_password)
         )
-        # Only mark as used if it's NOT the free trial code
-        if activation_code != FREE_TRIAL_CODE:
-            cursor.execute(
-                "UPDATE activation_codes SET is_used = 1 WHERE code = ?",
-                (activation_code,)
-            )
         conn.commit()
         conn.close()
+        # Consume one activation on Lemonsqueezy (non-blocking; skip for free trial)
+        if activation_code != FREE_TRIAL_CODE:
+            activate_license_key(activation_code)
         return True, "✅ Account created! Please log in with your new credentials."
     except Exception as e:
         conn.rollback()

@@ -30,10 +30,11 @@ st.title("⚡ LCL Filter Automated Design Platform")
 st.markdown("Built for **power electronics hardware engineers** · Full workflow from parameter design to hardware implementation")
 
 # ── Tabs ─────────────────────────────────────────────────
-tab_trial, tab_demo, tab_register, tab_login = st.tabs([
+tab_trial, tab_about, tab_buy, tab_activate, tab_login = st.tabs([
     "🎁 Free Trial",
-    "🎬 About",
-    "🚀 Get Started (Free)",
+    "📖 About",
+    "💳 Purchase",
+    "🚀 Activate Account",
     "🔐 Login",
 ])
 
@@ -66,7 +67,7 @@ with tab_trial:
 # ──────────────────────────────────────────────────────────
 # Tab 2: About
 # ──────────────────────────────────────────────────────────
-with tab_demo:
+with tab_about:
 
     st.markdown("### 💡 Does this sound familiar?")
     st.markdown(
@@ -92,10 +93,10 @@ with tab_demo:
     st.markdown(
         """
         I'm a hardware engineer working on wind power converters. I built this tool to solve my own
-        LCL filter design problems — and I'm sharing it **completely free** during early access.
+        LCL filter design problems — and I'm sharing it with a **free trial** so you can experience
+        the full workflow before deciding.
 
-        All 10 modules are unlocked. No credit card. No waitlist.
-        Click **"Get Started"** above, register in 30 seconds, and start designing.
+        Try it first, no registration needed. When you're ready, grab a license and unlock everything.
 
         I'd love your feedback on what works and what's missing.
         """
@@ -201,15 +202,15 @@ with tab_demo:
     st.markdown("---")
     st.markdown(
         """
-        <div style='background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%);
-                    border:1px solid #52c41a; border-radius:12px; padding:20px;
+        <div style='background: linear-gradient(135deg, #fdf4ff 0%, #f3e8ff 100%);
+                    border:1px solid #a855f7; border-radius:12px; padding:20px;
                     text-align:center;'>
-            <h3 style='margin:0 0 8px 0; color:#389e0d;'>🎁 Free During Early Access</h3>
+            <h3 style='margin:0 0 8px 0; color:#7e22ce;'>💳 Ready to unlock everything?</h3>
             <p style='color:#555; font-size:15px; margin:0 0 8px 0;'>
-                All 10 modules unlocked. No credit card required.
+                One-time purchase · Lifetime access · All future updates included
             </p>
             <p style='color:#555; font-size:14px; margin:0;'>
-                👆 Click <strong>"Get Started (Free)"</strong> to register in 30 seconds.
+                👆 Click <strong>"Purchase"</strong> tab above to get started.
             </p>
         </div>
         """,
@@ -217,30 +218,60 @@ with tab_demo:
     )
 
 # ──────────────────────────────────────────────────────────
-# Tab 2: Register
+# Tab 3: Purchase
 # ──────────────────────────────────────────────────────────
-with tab_register:
-    st.markdown("### 🚀 Create Your Free Account")
+with tab_buy:
+    st.markdown("### 💳 Purchase License")
 
-    # Free access code — shown prominently so user can just copy-paste
     st.markdown(
         """
-        <div style='background-color:#e6f7ff; border-left:4px solid #1890ff;
-                    padding:16px; border-radius:8px; margin-bottom:20px;'>
-            <p style='margin:0 0 6px 0; font-weight:bold; color:#0050b3; font-size:15px;'>
-                🎁 Early Access Code (free — no payment needed)
-            </p>
-            <div style='background:#fff; border:2px dashed #1890ff; border-radius:8px;
-                        padding:10px 16px; text-align:center; margin-bottom:8px;'>
-                <span style='font-size:24px; font-weight:bold; letter-spacing:4px;
-                             color:#0050b3; font-family:monospace;'>FREETRIAL2025</span>
+        <div style='background: linear-gradient(135deg, #fdf4ff 0%, #f3e8ff 100%);
+                    border:2px solid #a855f7; border-radius:16px; padding:32px;
+                    text-align:center; margin-bottom:24px;'>
+            <div style='font-size:56px; font-weight:bold; color:#7e22ce; line-height:1;
+                        margin-bottom:8px;'>$29</div>
+            <div style='color:#555; font-size:16px;'>
+                One-time purchase · Lifetime access · All future updates included
             </div>
-            <p style='margin:0; color:#888; font-size:12px; text-align:center;'>
-                Copy this code → paste it into the "Access code" field below → register instantly
-            </p>
         </div>
         """,
         unsafe_allow_html=True
+    )
+
+    st.markdown("#### How to purchase")
+    st.markdown(
+        """
+        1. Click the purchase button below to go to our secure checkout page
+        2. Complete payment (credit card or PayPal accepted)
+        3. You will receive a license key via email automatically
+        4. Come back here, click the **"Activate Account"** tab, and enter your license key
+        """
+    )
+
+    st.markdown(
+        """
+        <div style='text-align:center; margin: 28px 0 16px 0;'>
+            <a href='https://powertool-en.lemonsqueezy.com/checkout/buy/54da6544-3772-41f2-822f-f5222d5c9c06'
+               target='_blank'
+               style='display:inline-block; background:#a855f7; color:white;
+                      padding:14px 40px; border-radius:10px; text-decoration:none;
+                      font-size:17px; font-weight:bold; box-shadow: 0 4px 12px rgba(168,85,247,0.3);'>
+                🛒 Purchase Now — $29
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<p style='text-align:center; color:#888; font-size:13px;'>Questions? Contact gpy1090@gmail.com</p>", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────────
+# Tab 4: Activate Account
+# ──────────────────────────────────────────────────────────
+with tab_activate:
+    st.markdown("### 🚀 Activate Your Account")
+    st.markdown(
+        "Already purchased? Enter your license key below to create your account and unlock all modules."
     )
 
     with st.form("register_form"):
@@ -250,19 +281,19 @@ with tab_register:
         new_password        = st.text_input("Password", type="password")
         new_password_repeat = st.text_input("Confirm password", type="password")
         activation_code     = st.text_input(
-            "🔑 Access code",
-            placeholder="Paste FREETRIAL2025 here",
-            help="Use the free access code shown above."
+            "🔑 License key",
+            placeholder="Paste your license key here",
+            help="You received this via email after purchase."
         )
 
         submit_button = st.form_submit_button(
-            "✅ Create Account & Start Designing",
+            "✅ Activate & Create Account",
             use_container_width=True
         )
 
         if submit_button:
             if not all([new_username, new_password, activation_code]):
-                st.error("⚠️ Username, password, and access code are required.")
+                st.error("⚠️ Username, password, and license key are required.")
             elif new_password != new_password_repeat:
                 st.error("⚠️ Passwords do not match.")
             else:
@@ -279,16 +310,20 @@ with tab_register:
 
     st.markdown(
         "<div style='color:#888; font-size:13px; margin-top:8px;'>"
-        "Already have an account? Click the <strong>Login</strong> tab above."
+        "Already have an account? Click the <strong>Login</strong> tab above.<br>"
+        "Need to purchase a license? Click the <strong>Purchase</strong> tab above."
         "</div>",
         unsafe_allow_html=True
     )
 
 # ──────────────────────────────────────────────────────────
-# Tab 3: Login
+# Tab 5: Login
 # ──────────────────────────────────────────────────────────
 with tab_login:
-    authenticator.login()
+    try:
+        authenticator.login('Login', 'main')
+    except TypeError:
+        authenticator.login(location='main')
     authentication_status = st.session_state.get("authentication_status")
     name = st.session_state.get("name")
     username = st.session_state.get("username")
