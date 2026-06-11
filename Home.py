@@ -222,47 +222,34 @@ with tab_about:
 # ──────────────────────────────────────────────────────────
 with tab_buy:
     st.markdown("### 💳 Purchase License")
-
-    st.markdown(
-        """
-        <div style='background: linear-gradient(135deg, #fdf4ff 0%, #f3e8ff 100%);
-                    border:2px solid #a855f7; border-radius:16px; padding:32px;
-                    text-align:center; margin-bottom:24px;'>
-            <div style='font-size:56px; font-weight:bold; color:#7e22ce; line-height:1;
-                        margin-bottom:8px;'>$29</div>
-            <div style='color:#555; font-size:16px;'>
-                One-time purchase · Lifetime access · All future updates included
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("#### How to purchase")
-    st.markdown(
-        """
-        1. Click the purchase button below to go to our secure checkout page
-        2. Complete payment (credit card or PayPal accepted)
-        3. You will receive a license key via email automatically
-        4. Come back here, click the **"Activate Account"** tab, and enter your license key
-        """
-    )
-
-    st.markdown(
-        """
-        <div style='text-align:center; margin: 28px 0 16px 0;'>
-            <a href='https://powertool-en.lemonsqueezy.com/checkout/buy/54da6544-3772-41f2-822f-f5222d5c9c06'
-               target='_blank'
-               style='display:inline-block; background:#a855f7; color:white;
-                      padding:14px 40px; border-radius:10px; text-decoration:none;
-                      font-size:17px; font-weight:bold; box-shadow: 0 4px 12px rgba(168,85,247,0.3);'>
-                🛒 Purchase Now — $29
-            </a>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, #f0f4ff 0%, #fafaff 100%);
+                border:1px solid #c7d2fe; border-radius:12px; padding:20px;
+                text-align:center; margin-bottom:20px;'>
+        <p style='font-size:36px; font-weight:bold; color:#4f46e5; margin:0;'>$29</p>
+        <p style='color:#888; font-size:13px; margin:8px 0 0 0;'>
+            One-time purchase · Lifetime access · All future updates included
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("#### How to get full access")
+    st.markdown("""
+    1. Click the button below to go to our secure checkout page
+    2. Complete payment (credit card or PayPal accepted)
+    3. You will receive a **license key** via email automatically
+    4. Come back here, click the **Activate Account** tab, and enter your license key to register
+    """)
+    st.markdown("""
+    <div style='text-align:center; margin: 28px 0 16px 0;'>
+        <a href='https://www.creem.io/test/payment/prod_JKYmRRxAf2SFRP29lgu4g'
+           target='_blank'
+           style='display:inline-block; background:#a855f7; color:white;
+                  padding:14px 40px; border-radius:10px; text-decoration:none;
+                  font-size:17px; font-weight:bold; box-shadow: 0 4px 12px rgba(168,85,247,0.3);'>
+            🛒 Purchase Now — $29
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:#888; font-size:13px;'>Questions? Contact gpy1090@gmail.com</p>", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────

@@ -74,56 +74,49 @@ def get_all_users_for_auth():
 
 
 def validate_license_key(license_key: str) -> tuple:
-    """Call Lemonsqueezy API to validate a license key."""
+    """Call Creem API to validate a license key."""
     try:
         response = requests.post(
-            "https://api.lemonsqueezy.com/v1/licenses/validate",
-            json={"license_key": license_key},
-            headers={"Accept": "application/json"},
+            "https://api.creem.io/v1/licenses/validate",
+            json={"key": license_key},
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
             timeout=10
         )
         data = response.json()
-        if data.get("valid"):
-            activation_usage = data.get("license_key", {}).get("activation_usage", 0)
-            activation_limit = data.get("license_key", {}).get("activation_limit", 1)
-            if activation_limit is not None and activation_usage >= activation_limit:
-                return False, "This license key has already been used."
+        if response.status_code == 200 and data.get("status") == "active":
             return True, "valid"
         else:
-            return False, "Invalid or expired license key."
+            error_msg = data.get("message", "Invalid or expired license key.")
+            return False, error_msg
     except Exception as e:
         return False, f"Verification failed, please try again. ({str(e)})"
 
 
 def activate_license_key(license_key: str) -> bool:
-    """Call Lemonsqueezy API to consume one activation for the license key."""
+    """Call Creem API to consume one activation for the license key."""
     try:
         response = requests.post(
-            "https://api.lemonsqueezy.com/v1/licenses/activate",
-            json={"license_key": license_key, "instance_name": "powertool"},
-            headers={"Accept": "application/json"},
+            "https://api.creem.io/v1/licenses/activate",
+            json={"key": license_key, "instance_name": "powertool"},
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
             timeout=10
         )
-        return response.json().get("activated", False)
+        return response.status_code == 200
     except Exception:
         return False
 
 
 def register_new_user(username, email, name, plain_password, activation_code):
     """Register a new user with activation code verification."""
-    # Validate license key: free trial code uses DB; real licenses use Lemonsqueezy API
-    if activation_code == FREE_TRIAL_CODE:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT is_used FROM activation_codes WHERE code = ?", (activation_code,))
-        if cursor.fetchone() is None:
-            conn.close()
-            return False, "❌ Invalid access code. Please check and try again."
-        conn.close()
-    else:
-        valid, msg = validate_license_key(activation_code)
-        if not valid:
-            return False, f"❌ {msg}"
+    valid, msg = validate_license_key(activation_code)
+    if not valid:
+        return False, f"❌ {msg}"
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -143,9 +136,7 @@ def register_new_user(username, email, name, plain_password, activation_code):
         )
         conn.commit()
         conn.close()
-        # Consume one activation on Lemonsqueezy (non-blocking; skip for free trial)
-        if activation_code != FREE_TRIAL_CODE:
-            activate_license_key(activation_code)
+        activate_license_key(activation_code)
         return True, "✅ Account created! Please log in with your new credentials."
     except Exception as e:
         conn.rollback()
