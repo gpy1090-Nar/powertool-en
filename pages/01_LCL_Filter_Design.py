@@ -1591,12 +1591,15 @@ elif selection == nav_options[2]:
 
             # ✅ Optimization 2: show results directly in transformer mode
             st.divider()
-            col_lg1, col_lg2 = st.columns(2)
-            with col_lg1:
-                st.metric(label="📐 Transformer Leakage $L_g$", value=f"{lg * 1000:.3f} mH")
-            with col_lg2:
-                st.metric(label="📊 Equivalent SCR", value=f"{eq_scr:.1f}",
-                          help="Equivalent SCR = Transformer short-circuit capacity / (uk% × converter rating). This is a system matching metric, not an intrinsic transformer property.")
+            if is_trial:
+                trial_lock("Calculation results require paid access")
+            else:
+                col_lg1, col_lg2 = st.columns(2)
+                with col_lg1:
+                    st.metric(label="📐 Transformer Leakage $L_g$", value=f"{lg * 1000:.3f} mH")
+                with col_lg2:
+                    st.metric(label="📊 Equivalent SCR", value=f"{eq_scr:.1f}",
+                              help="Equivalent SCR = Transformer short-circuit capacity / (uk% × converter rating). This is a system matching metric, not an intrinsic transformer property.")
 
     # --- 2. Core mathematical calculations ---
     l1 = l1_mh * 1e-3
@@ -9267,16 +9270,37 @@ section Tab4 lifetimecalculatephysicalfundamentals.
         st.divider()
         st.markdown("#### ⚡  LCL filtercapacitor?()")
 
+        # Build ESR comparison figure before column split to ensure fig_esr is always defined
+        f_pl = np.logspace(1, 5, 400)
+        esr_mkp  = 3e-3 * (1 + (f_pl / 1e5) ** 0.3)
+        esr_elec = 80e-3 * (50 / np.maximum(f_pl, 50)) ** 0.5 + 20e-3
+        fig_esr = go.Figure()
+        fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_mkp*1000, name='MKP ()',
+                                     line=dict(color='#198754', width=2.5)))
+        fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_elec*1000, name='()',
+                                     line=dict(color='#dc3545', width=2.5, dash='dash')))
+        fig_esr.add_vline(x=_fsw, line_dash='dot', line_color='#fd7e14',
+                          annotation_text=f'currentfsw={_fsw:.0f}Hz')
+        fig_esr.update_layout(
+            title='ESR frequencycharacteristiccomparison()',
+            xaxis_title='Frequency (Hz)',
+            yaxis_title='ESR (mΩ)',
+            xaxis_type='log',
+            yaxis_type='log',
+            height=320,
+            template='plotly_white'
+        )
+
         col_t1, col_t2 = st.columns(2, gap="large")
         with col_t1:
             st.markdown(f"""
-physicalconstraint, : 
+physicalconstraint, :
 
 **constraint①: ESR → thermal dissipation**
 
 $$P_{{loss}} = I_{{ripple}}^2 \\times ESR$$
 
- {_fsw:.0f} Hz Switching Frequency: 
+ {_fsw:.0f} Hz Switching Frequency:
 
 | capacitor | ESR() | 50Athermal dissipation | result |
 |---------|------------|------------|------|
@@ -9285,34 +9309,14 @@ $$P_{{loss}} = I_{{ripple}}^2 \\times ESR$$
 
 **constraint②:  dv/dt rated → **
 
-IEC 61071 §5.1 requirementpowercapacitor**annotation dv/dt Rating**, 
-designstandard(IEC 60384)Parameter, 
+IEC 61071 §5.1 requirementpowercapacitor**annotation dv/dt Rating**,
+designstandard(IEC 60384)Parameter,
  PWM .
 
 > 📚 IEC 61071:2017 §3.1 & §5.1; IEC 60384(standard, dv/dtrequirement)
             """)
 
         with col_t2:
-            # ESR 
-            f_pl = np.logspace(1, 5, 400)
-            esr_mkp  = 3e-3 * (1 + (f_pl / 1e5) ** 0.3)
-            esr_elec = 80e-3 * (50 / np.maximum(f_pl, 50)) ** 0.5 + 20e-3
-            fig_esr = go.Figure()
-            fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_mkp*1000, name='MKP ()',
-                                         line=dict(color='#198754', width=2.5)))
-            fig_esr.add_trace(go.Scatter(x=f_pl, y=esr_elec*1000, name='()',
-                                         line=dict(color='#dc3545', width=2.5, dash='dash')))
-            fig_esr.add_vline(x=_fsw, line_dash='dot', line_color='#fd7e14',
-                              annotation_text=f'currentfsw={_fsw:.0f}Hz')
-            fig_esr.update_layout(
-                title='ESR frequencycharacteristiccomparison()',
-                xaxis_title='Frequency (Hz)',
-                yaxis_title='ESR (mΩ)',
-                xaxis_type='log',
-                yaxis_type='log',
-                height=320,
-                template='plotly_white'
-            )
             st.plotly_chart(fig_esr, use_container_width=True)
             st.caption("data: EPCOS B32xxx MKP data; Nichicon Parameter")
 
