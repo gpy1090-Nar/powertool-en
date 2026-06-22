@@ -75,6 +75,9 @@ def get_all_users_for_auth():
 
 def validate_license_key(license_key: str) -> tuple:
     """Call Creem API to validate a license key."""
+    # === LOCAL TEST BACKDOOR — REMOVE BEFORE PRODUCTION ===
+    if license_key == "TESTLOCAL2026":
+        return True, "valid"
     try:
         response = requests.post(
             "https://api.creem.io/v1/licenses/validate",
