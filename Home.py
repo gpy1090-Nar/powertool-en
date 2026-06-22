@@ -226,7 +226,7 @@ with tab_buy:
     <div style='background: linear-gradient(135deg, #f0f4ff 0%, #fafaff 100%);
                 border:1px solid #c7d2fe; border-radius:12px; padding:20px;
                 text-align:center; margin-bottom:20px;'>
-        <p style='font-size:36px; font-weight:bold; color:#4f46e5; margin:0;'>$29</p>
+        <p style='font-size:36px; font-weight:bold; color:#4f46e5; margin:0;'>$39</p>
         <p style='color:#888; font-size:13px; margin:8px 0 0 0;'>
             One-time purchase · Lifetime access · All future updates included
         </p>
@@ -241,12 +241,12 @@ with tab_buy:
     """)
     st.markdown("""
     <div style='text-align:center; margin: 28px 0 16px 0;'>
-        <a href='https://www.creem.io/test/payment/prod_JKYmRRxAf2SFRP29lgu4g'
+        <a href='https://www.creem.io/payment/prod_3BMbIvss0TmmfCVLwUX46Z'
            target='_blank'
            style='display:inline-block; background:#a855f7; color:white;
                   padding:14px 40px; border-radius:10px; text-decoration:none;
                   font-size:17px; font-weight:bold; box-shadow: 0 4px 12px rgba(168,85,247,0.3);'>
-            🛒 Purchase Now — $29
+            🛒 Purchase Now — $39
         </a>
     </div>
     """, unsafe_allow_html=True)

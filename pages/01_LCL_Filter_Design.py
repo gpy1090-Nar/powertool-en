@@ -64,12 +64,12 @@ def trial_lock(label="This feature requires a paid account", compact=False):
             <div style="color:#888; font-size:12px; margin-bottom:12px;">
                 Purchase to unlock all features — one-time payment, lifetime access
             </div>
-            <a href="https://www.creem.io/test/payment/prod_JKYmRRxAf2SFRP29lgu4g"
+            <a href="https://www.creem.io/payment/prod_3BMbIvss0TmmfCVLwUX46Z"
                target="_blank"
                style="display:inline-block; background:#a855f7; color:white;
                       padding:8px 24px; border-radius:8px; text-decoration:none;
                       font-size:13px; font-weight:bold; margin-top:8px;">
-                🛒 Unlock Now — $29
+                🛒 Unlock Now — $39
             </a>
         </div>
         """,
