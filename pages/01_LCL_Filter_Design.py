@@ -396,19 +396,6 @@ elif selection == nav_options[1]:
     import sys as _sys_top
     import os as _os_top
 
-    # 
-    def _ensure_pkg(import_name: str, pip_name: str):
-        try:
-            _importlib.import_module(import_name)
-        except ImportError:
-            _subprocess.check_call(
-                [_sys_top.executable, "-m", "pip", "install", pip_name, "--quiet"],
-                stdout=_subprocess.DEVNULL, stderr=_subprocess.DEVNULL
-            )
-            _importlib.invalidate_caches()
-
-    _ensure_pkg("docx", "python-docx")
-    _ensure_pkg("reportlab", "reportlab")
 
     import matplotlib
     matplotlib.use('Agg')
