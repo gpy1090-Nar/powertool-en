@@ -307,10 +307,7 @@ with tab_activate:
 # Tab 5: Login
 # ──────────────────────────────────────────────────────────
 with tab_login:
-    try:
-        authenticator.login('Login', 'main')
-    except TypeError:
-        authenticator.login(location='main')
+    authenticator.login(location='main')
     authentication_status = st.session_state.get("authentication_status")
     name = st.session_state.get("name")
     username = st.session_state.get("username")
