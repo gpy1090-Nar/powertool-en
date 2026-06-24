@@ -1255,8 +1255,8 @@ elif selection == nav_options[1]:
             if not is_trial:
                 st.caption(f"With k={l2_ratio_b2}, recommended L1: {l_inner_min*1000:.3f} ~ {l1_suggest_max*1000:.3f} mH")
             user_l1_b2 = st.number_input("Lock L1 (mH)", min_value=0.001,
-                                         value=max(float(st.session_state.get('lcl_l1', 0.5)), 0.001),
-                                         step=0.01, format="%.3f", key='lcl_l1')
+                                         value=max(float(st.session_state.get('lcl_l1_with_l2', 0.5)), 0.001),
+                                         step=0.01, format="%.3f", key='lcl_l1_with_l2')
             l2_locked = user_l1_b2 * l2_ratio_b2
             st.session_state['lcl_l2'] = l2_locked
             if is_trial:
@@ -1272,8 +1272,8 @@ elif selection == nav_options[1]:
                 st.info(f"CL topology: external leakage {lg_b2*1000:.3f} mH serves as L2.\n\nRecommended L1: **{l_inner_min*1000:.3f} ~ {l_inner_max*1000:.3f}** mH")
             l2_ratio_b2 = 0.0
             user_l1_b2 = st.number_input("Lock L1 (mH)", min_value=0.001,
-                                         value=max(float(st.session_state.get('lcl_l1', 0.5)), 0.001),
-                                         step=0.01, format="%.3f", key='lcl_l1')
+                                         value=max(float(st.session_state.get('lcl_l1_no_l2', 0.5)), 0.001),
+                                         step=0.01, format="%.3f", key='lcl_l1_no_l2')
             st.session_state['lcl_l2'] = 0.0
             l2_locked = 0.0
             if is_trial:
@@ -6788,6 +6788,20 @@ Z_{grid,h} = R_g + j\omega_h L_g
                 st.warning("⚠ No Section 7 FFT data detected.")
                 st.caption('Go to "7. Harmonic Standard Verification" → "📊 FFT Simulation Analysis" tab, '
                            'run the simulation and click the "Save results to Section 8" button, then return here.')
+                # Pre-populate with typical PWM inverter harmonic profile so Section 8 works without Section 7
+                if not st.session_state.get('s8_imported_harm'):
+                    _i1 = float(v_il) if v_il > 0 else 1.0
+                    # Typical 3-phase PWM inverter harmonic current ratios (relative to rated current)
+                    _pwm_pct = {
+                        1: 1.000, 2: 0.005, 3: 0.000, 4: 0.004, 5: 0.080,
+                        6: 0.000, 7: 0.050, 8: 0.003, 9: 0.000, 10: 0.003,
+                        11: 0.030, 12: 0.000, 13: 0.025, 14: 0.002, 15: 0.000,
+                        16: 0.002, 17: 0.015, 18: 0.000, 19: 0.012, 20: 0.001,
+                    }
+                    st.session_state['s8_imported_harm'] = {
+                        h: round(_i1 * pct, 4) for h, pct in _pwm_pct.items()
+                    }
+                    st.caption("📌 Default PWM inverter harmonic profile loaded (typical values; run Section 7 for actual data).")
                 do_import = False
 
         with col_imp2:
