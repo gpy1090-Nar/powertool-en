@@ -1,7 +1,6 @@
 import sqlite3
 import bcrypt
 import hashlib
-import requests
 
 DB_NAME = 'lcl_users.db'
 
@@ -73,46 +72,15 @@ def get_all_users_for_auth():
     return credentials
 
 
-def validate_license_key(license_key: str) -> tuple:
-    """Call Creem API to validate a license key."""
-    # === LOCAL TEST BACKDOOR — REMOVE BEFORE PRODUCTION ===
-    if license_key == "TESTLOCAL2026":
+def validate_license_key(license_key):
+    """Validate activation code - rotate codes monthly"""
+    VALID_CODES = [
+        "POWERTOOL-2026-JUL",
+        "POWERTOOL-2026-AUG",
+    ]
+    if license_key.strip() in VALID_CODES:
         return True, "valid"
-    try:
-        response = requests.post(
-            "https://api.creem.io/v1/licenses/validate",
-            json={"key": license_key},
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            timeout=10
-        )
-        data = response.json()
-        if response.status_code == 200 and data.get("status") == "active":
-            return True, "valid"
-        else:
-            error_msg = data.get("message", "Invalid or expired license key.")
-            return False, error_msg
-    except Exception as e:
-        return False, f"Verification failed, please try again. ({str(e)})"
-
-
-def activate_license_key(license_key: str) -> bool:
-    """Call Creem API to consume one activation for the license key."""
-    try:
-        response = requests.post(
-            "https://api.creem.io/v1/licenses/activate",
-            json={"key": license_key, "instance_name": "powertool"},
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            timeout=10
-        )
-        return response.status_code == 200
-    except Exception:
-        return False
+    return False, "invalid"
 
 
 def register_new_user(username, email, name, plain_password, activation_code):
@@ -139,7 +107,6 @@ def register_new_user(username, email, name, plain_password, activation_code):
         )
         conn.commit()
         conn.close()
-        activate_license_key(activation_code)
         return True, "✅ Account created! Please log in with your new credentials."
     except Exception as e:
         conn.rollback()

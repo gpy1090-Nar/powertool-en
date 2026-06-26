@@ -64,7 +64,7 @@ def trial_lock(label="This feature requires a paid account", compact=False):
             <div style="color:#888; font-size:12px; margin-bottom:12px;">
                 Purchase to unlock all features — one-time payment, lifetime access
             </div>
-            <a href="https://www.creem.io/payment/prod_3BMbIvss0TmmfCVLwUX46Z"
+            <a href="https://gpyhunter.gumroad.com/l/lCL-filter-design-tool"
                target="_blank"
                style="display:inline-block; background:#a855f7; color:white;
                       padding:8px 24px; border-radius:8px; text-decoration:none;
